@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Regenerate Url rewrites
+ *
+ * @package OlegKoval_RegenerateUrlRewrites
+ * @author Oleg Koval <contact@olegkoval.com>
+ * @copyright 2017 Oleg Koval
+ * @license OSL-3.0, AFL-3.0
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+</config>
