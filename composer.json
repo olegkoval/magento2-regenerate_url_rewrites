@@ -1,0 +1,20 @@
+{
+    "name": "olegkoval/magento2-regenerate-url-rewrites",
+    "description": "Add into Magento2 a CLI feature which allow to regenerate a Url rewrites of products/categories",
+    "type": "magento2-module",
+    "version": "1.0.0",
+    "license": [
+        "OSL-3.0",
+        "AFL-3.0"
+    ],
+    "require": {
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "OlegKoval\\RegenerateUrlRewrites\\": ""
+        }
+    }
+}

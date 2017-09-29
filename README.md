@@ -4,11 +4,14 @@ Regenerate a Url rewrites of products/categories
 Magento 2 "Regenerate Url rewrites" extension add a CLI feature which allow to regenerate a Url rewrites of products/categories in all stores or specific store.
 
 ## INSTALLATION
-* [if needed] extract files from an archive
 
-* deploy files into Magento2 folder of your store
+### MANUAL INSTALLATION
+* extract files from an archive
 
-* enable extension (in command line):
+* deploy files into Magento2 folder `app/code/OlegKoval/RegenerateUrlRewrites`
+
+### ENABLE EXTENSION
+* enable extension (in command line, see manual: `http://devdocs.magento.com/guides/v2.0/config-guide/cli/config-cli-subcommands.html`):
 >`$> bin/magento module:enable OlegKoval_RegenerateUrlRewrites`
 
 * to make sure that the enabled module is properly registered, run 'setup:upgrade':
