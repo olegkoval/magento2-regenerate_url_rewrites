@@ -5,6 +5,10 @@ Magento 2 "Regenerate Url rewrites" extension add a CLI feature which allow to r
 
 ## INSTALLATION
 
+### COMPOSER INSTALLATION
+* run composer command:
+>`composer require olegkoval/magento2-regenerate-url-rewrites=dev-master`
+
 ### MANUAL INSTALLATION
 * extract files from an archive
 
