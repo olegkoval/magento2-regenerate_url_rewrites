@@ -101,15 +101,17 @@ class RegenerateUrlRewrites extends Command
         // remove all current url rewrites
         $this->removeAllUrlRewrites($storesList);
 
-        // get categories collection
-        $categories = $this->_categoryCollectionFactory->create()
-        ->addAttributeToSelect('*')
-        ->addFieldToFilter('level', array('gt' => '1'))
-        ->setOrder('level', 'DESC');
-
         foreach ($storesList as $storeId => $storeCode) {
             $output->write("[Store ID: {$storeId}, Store View code: {$storeCode}]:");
             $step = 0;
+
+            // get categories collection
+            $categories = $this->_categoryCollectionFactory->create()
+                ->addAttributeToSelect('*')
+                ->setStore($storeId)
+                ->addFieldToFilter('level', array('gt' => '1'))
+                ->setOrder('level', 'DESC');
+
             foreach ($categories as $category) {
                 try {
                     // we use save() action to start all before/after 'save' events (includes a regenerating of url rewrites)
