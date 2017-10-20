@@ -33,6 +33,11 @@ class RegenerateUrlRewrites extends Command
     protected $_storeManager;
 
     /**
+     * @var \Magento\Framework\App\State $appState
+     */
+     protected $_appState;
+
+    /**
      * Constructor of RegenerateUrlRewrites
      *
      * @param \Magento\Framework\App\ResourceConnection $resource
@@ -42,11 +47,13 @@ class RegenerateUrlRewrites extends Command
     public function __construct(
         \Magento\Framework\App\ResourceConnection $resource,
         \Magento\Catalog\Model\ResourceModel\Category\CollectionFactory $categoryCollectionFactory,
-        \Magento\Catalog\Helper\Category $categoryHelper
+        \Magento\Catalog\Helper\Category $categoryHelper,
+        \Magento\Framework\App\State $appState
     ) {
         $this->_resource = $resource;
         $this->_categoryCollectionFactory = $categoryCollectionFactory;
         $this->_categoryHelper = $categoryHelper;
+        $this->_appState = $appState;
         parent::__construct();
     }
 
@@ -100,6 +107,8 @@ class RegenerateUrlRewrites extends Command
 
         // remove all current url rewrites
         $this->removeAllUrlRewrites($storesList);
+        
+        $this->_appState->setAreaCode('adminhtml');
 
         foreach ($storesList as $storeId => $storeCode) {
             $output->write("[Store ID: {$storeId}, Store View code: {$storeCode}]:");
