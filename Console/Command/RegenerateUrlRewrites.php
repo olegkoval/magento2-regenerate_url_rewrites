@@ -108,7 +108,13 @@ class RegenerateUrlRewrites extends Command
         // remove all current url rewrites
         $this->removeAllUrlRewrites($storesList);
         
-        $this->_appState->setAreaCode('adminhtml');
+        // set area code if needed
+        try {
+            $areaCode = $this->_appState->getAreaCode();
+        } catch (\Magento\Framework\Exception\LocalizedException $e) {
+            // if area code is not set then magento generate exception "LocalizedException"
+            $this->_appState->setAreaCode('adminhtml');
+        }
 
         foreach ($storesList as $storeId => $storeCode) {
             $output->write("[Store ID: {$storeId}, Store View code: {$storeCode}]:");
