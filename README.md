@@ -7,7 +7,7 @@ Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrite
 
 ### COMPOSER INSTALLATION
 * run composer command:
->`$> composer require olegkoval/magento2-regenerate-url-rewrites`
+>`$> composer require olegkoval/magento2-regenerate-url-rewrites=dev-master`
 
 ### MANUAL INSTALLATION
 * extract files from an archive
