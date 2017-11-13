@@ -68,7 +68,7 @@ class RegenerateUrlRewrites extends Command
                 new InputArgument(
                     'storeId',
                     InputArgument::OPTIONAL,
-                    'Store ID: 5'
+                    '5'
                 )
             ]);
     }
@@ -83,30 +83,37 @@ class RegenerateUrlRewrites extends Command
     {
         set_time_limit(0);
         $allStores = $this->getAllStoreIds();
+        $storesList = [];
         $output->writeln('Regenerating of Url rewrites:');
 
         // get store Id (if was set)
         $storeId = $input->getArgument('storeId');
 
+        // if store ID is not specified the re-generate for all stores
+        if (is_null($storeId)) {
+            $storesList = $allStores;
+        }
         // we will re-generate URL only in this specific store (if it exists)
-        if (!empty($storeId) && $storeId > 0) {
+        elseif (strlen($storeId) && ctype_digit($storeId)) {
             if (isset($allStores[$storeId])) {
                 $storesList = array(
-                $storeId => $allStores[$storeId]
-            );
+                    $storeId => $allStores[$storeId]
+                );
             } else {
-                $output->writeln('ERROR: store with this ID not exists.');
-                $output->writeln('Finished');
+                $this->displayError($output, 'ERROR: store with this ID not exists.');
                 return;
             }
         }
-        // otherwise we re-generate for all stores
+        // disaply error if user set some incorrect value
         else {
-            $storesList = $allStores;
+            $this->displayError($output, 'ERROR: store ID should have a integer value.', true);
+            return;
         }
 
         // remove all current url rewrites
-        $this->removeAllUrlRewrites($storesList);
+        if (count($storesList) > 0) {
+            $this->removeAllUrlRewrites($storesList);
+        }
         
         // set area code if needed
         try {
@@ -117,6 +124,7 @@ class RegenerateUrlRewrites extends Command
         }
 
         foreach ($storesList as $storeId => $storeCode) {
+            $output->writeln('');
             $output->write("[Store ID: {$storeId}, Store View code: {$storeCode}]:");
             $step = 0;
 
@@ -146,11 +154,10 @@ class RegenerateUrlRewrites extends Command
                     $output->writeln($e->getMessage());
                 }
             }
-            $output->writeln('');
         }
 
         $output->writeln('');
-
+        $output->writeln('');
         $output->writeln('Reindexation...');
         shell_exec('php bin/magento indexer:reindex');
 
@@ -187,18 +194,34 @@ class RegenerateUrlRewrites extends Command
         $result = [];
 
         $sql = $this->_resource->getConnection()->select()
-                          ->from($this->_resource->getTableName('store'), array('store_id', 'code'))
-                          ->where('`code` <> ?', 'admin')
-                          ->order('store_id', 'ASC');
+                    ->from($this->_resource->getTableName('store'), array('store_id', 'code'))
+                    ->order('store_id', 'ASC');
 
         $queryResult = $this->_resource->getConnection()->fetchAll($sql);
 
         foreach ($queryResult as $row) {
-            if (isset($row['store_id']) && (int)$row['store_id'] > 0) {
-                $result[(int)$row['store_id']] = $row['code'];
-            }
+            $result[(int)$row['store_id']] = $row['code'];
         }
 
         return $result;
+    }
+
+    /**
+     * Display error message
+     * @param  OutputInterface  $output
+     * @param  string  $errorMsg
+     * @param  boolean $displayHint
+     * @return void
+     */
+    private function displayError(&$output, $errorMsg, $displayHint = false)
+    {
+        $output->writeln('');
+        $output->writeln($errorMsg);
+
+        if ($displayHint) {
+            $output->writeln('Correct command is: bin/magento ok:urlrewrites:regenerate 19');
+        }
+
+        $output->writeln('Finished');
     }
 }
