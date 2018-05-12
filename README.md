@@ -31,6 +31,16 @@ Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrite
 
 * to regenerate all Url rewrites of the categories/products in the specific store view (e.g.: store view id is "2"):
 >`$> bin/magento ok:urlrewrites:regenerate 2`
+or
+>`$> bin/magento ok:urlrewrites:regenerate --storeId=2`
+
+* to save a current URL rewrites (e.g.: you've updated a name of product(s)/category(-ies) and want to get a new URL rewites and save current):
+>`$> bin/magento ok:urlrewrites:regenerate --save-old-urls`
+
+* also you can combine a options:
+>`$> bin/magento ok:urlrewrites:regenerate 2 --save-old-urls`
+or
+>`$> bin/magento ok:urlrewrites:regenerate --storeId=2 --save-old-urls`
 
 Enjoy!
 

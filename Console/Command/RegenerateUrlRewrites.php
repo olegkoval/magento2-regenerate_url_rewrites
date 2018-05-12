@@ -13,10 +13,14 @@ namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class RegenerateUrlRewrites extends Command
 {
+    const INPUT_KEY_STOREID = 'storeId';
+    const INPUT_KEY_SAVE_REWRITES_HISTORY = 'save-old-urls';
+
     /**
      * @var \Magento\Catalog\Model\ResourceModel\Category\CollectionFactory
      */
@@ -66,9 +70,21 @@ class RegenerateUrlRewrites extends Command
             ->setDescription('Regenerate Url rewrites of products/categories')
             ->setDefinition([
                 new InputArgument(
-                    'storeId',
+                    self::INPUT_KEY_STOREID,
                     InputArgument::OPTIONAL,
                     '5'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_STOREID,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Specific store id'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_SAVE_REWRITES_HISTORY,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Save current URL Rewrites'
                 )
             ]);
     }
@@ -82,12 +98,23 @@ class RegenerateUrlRewrites extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         set_time_limit(0);
+        $saveOldUrls = false;
         $allStores = $this->getAllStoreIds();
         $storesList = [];
-        $output->writeln('Regenerating of Url rewrites:');
+        $output->writeln('Regenerating of URL rewrites:');
+
+
+        $options = $input->getOptions();
+        if (isset($options['save-old-urls']) && $options['save-old-urls'] === true) {
+            $saveOldUrls = true;
+        }
+
 
         // get store Id (if was set)
-        $storeId = $input->getArgument('storeId');
+        $storeId = $input->getArgument(self::INPUT_KEY_STOREID);
+        if (is_null($storeId)) {
+            $storeId = $input->getOption(self::INPUT_KEY_STOREID);
+        }
 
         // if store ID is not specified the re-generate for all stores
         if (is_null($storeId)) {
@@ -111,7 +138,7 @@ class RegenerateUrlRewrites extends Command
         }
 
         // remove all current url rewrites
-        if (count($storesList) > 0) {
+        if (count($storesList) > 0 && !$saveOldUrls) {
             $this->removeAllUrlRewrites($storesList);
         }
         
@@ -125,7 +152,7 @@ class RegenerateUrlRewrites extends Command
 
         foreach ($storesList as $storeId => $storeCode) {
             $output->writeln('');
-            $output->write("[Store ID: {$storeId}, Store View code: {$storeCode}]:");
+            $output->writeln("[Store ID: {$storeId}, Store View code: {$storeCode}]:");
             $step = 0;
 
             // get categories collection
@@ -141,6 +168,9 @@ class RegenerateUrlRewrites extends Command
                     // and we set orig "url_key" as empty to pass checks if data was updated
                     $category->setStoreId($storeId);
                     $category->setOrigData('url_key', '');
+                    if ($saveOldUrls) {
+                        $category->setData('save_rewrites_history', true);
+                    }
                     $category->save();
 
                     $step++;
