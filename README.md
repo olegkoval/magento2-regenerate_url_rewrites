@@ -37,6 +37,9 @@ or
 * to save a current URL rewrites (e.g.: you've updated a name of product(s)/category(-ies) and want to get a new URL rewites and save current):
 >`$> bin/magento ok:urlrewrites:regenerate --save-old-urls`
 
+* to do not run full reindex at the end of Url rewrites generation:
+>`$> bin/magento ok:urlrewrites:regenerate --no-reindex`
+
 * also you can combine a options:
 >`$> bin/magento ok:urlrewrites:regenerate 2 --save-old-urls`
 or
