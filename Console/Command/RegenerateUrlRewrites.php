@@ -20,6 +20,7 @@ class RegenerateUrlRewrites extends Command
 {
     const INPUT_KEY_STOREID = 'storeId';
     const INPUT_KEY_SAVE_REWRITES_HISTORY = 'save-old-urls';
+    const INPUT_KEY_NO_REINDEX = 'no-reindex';
 
     /**
      * @var \Magento\Catalog\Model\ResourceModel\Category\CollectionFactory
@@ -85,7 +86,13 @@ class RegenerateUrlRewrites extends Command
                     null,
                     InputOption::VALUE_NONE,
                     'Save current URL Rewrites'
-                )
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_REINDEX,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not run reindex when URL rewrites are generated.'
+                 )
             ]);
     }
 
@@ -99,6 +106,7 @@ class RegenerateUrlRewrites extends Command
     {
         set_time_limit(0);
         $saveOldUrls = false;
+        $runReindex = true;
         $allStores = $this->getAllStoreIds();
         $storesList = [];
         $output->writeln('Regenerating of URL rewrites:');
@@ -109,6 +117,9 @@ class RegenerateUrlRewrites extends Command
             $saveOldUrls = true;
         }
 
+        if (isset($options[self::INPUT_KEY_NO_REINDEX]) && $options[self::INPUT_KEY_NO_REINDEX] === true) {
+            $runReindex = false;
+        }
 
         // get store Id (if was set)
         $storeId = $input->getArgument(self::INPUT_KEY_STOREID);
@@ -188,8 +199,11 @@ class RegenerateUrlRewrites extends Command
 
         $output->writeln('');
         $output->writeln('');
-        $output->writeln('Reindexation...');
-        shell_exec('php bin/magento indexer:reindex');
+
+        if ($runReindex == true) {
+            $output->writeln('Reindexation...');
+            shell_exec('php bin/magento indexer:reindex');
+        }
 
         $output->writeln('Cache refreshing...');
         shell_exec('php bin/magento cache:clean');
