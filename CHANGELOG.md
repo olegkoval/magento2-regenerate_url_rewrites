@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.6] - 2018-07-26
+### Added
+- new option to run URL rewrite generation without running full reindex
+
+### Changed
+- update help notice to show INPUT_KEY_SAVE_REWRITES_HISTORY and INPUT_EY_NO_REINDEX
+
 ## [1.0.5] - 2018-05-13
 ### Added
 - new option to save current URL rewrites
