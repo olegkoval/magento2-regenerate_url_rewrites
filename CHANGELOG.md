@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - new option to run URL rewrite generation without running full reindex
 
 ### Changed
-- update help notice to show INPUT_KEY_SAVE_REWRITES_HISTORY and INPUT_EY_NO_REINDEX
+- update help notice to show INPUT_KEY_SAVE_REWRITES_HISTORY and INPUT_KEY_NO_REINDEX
 
 ## [1.0.5] - 2018-05-13
 ### Added
