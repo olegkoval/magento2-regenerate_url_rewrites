@@ -84,13 +84,13 @@ class RegenerateUrlRewrites extends Command
                 new InputOption(
                     self::INPUT_KEY_SAVE_REWRITES_HISTORY,
                     null,
-                    InputOption::VALUE_NONE,
+                    InputArgument::OPTIONAL,
                     'Save current URL Rewrites'
                 ),
                 new InputOption(
                     self::INPUT_KEY_NO_REINDEX,
                     null,
-                    InputOption::VALUE_NONE,
+                    InputArgument::OPTIONAL,
                     'Do not run reindex when URL rewrites are generated.'
                  )
             ]);
@@ -152,7 +152,7 @@ class RegenerateUrlRewrites extends Command
         if (count($storesList) > 0 && !$saveOldUrls) {
             $this->removeAllUrlRewrites($storesList);
         }
-        
+
         // set area code if needed
         try {
             $areaCode = $this->_appState->getAreaCode();
