@@ -4,7 +4,7 @@
  *
  * @package OlegKoval_RegenerateUrlRewrites
  * @author Oleg Koval <contact@olegkoval.com>
- * @copyright 2017 Oleg Koval
+ * @copyright 2018 Oleg Koval
  * @license OSL-3.0, AFL-3.0
  */
 
@@ -15,9 +15,21 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator;
-use Magento\UrlRewrite\Model\UrlPersistInterface;
+use Magento\Framework\App\ResourceConnection;
+use Magento\Catalog\Model\ResourceModel\Category\CollectionFactory as CategoryCollectionFactory;
+use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductCollectionFactory;
+use Magento\UrlRewrite\Model\UrlPersistInterface as UrlPersist;
 use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
+use Magento\Catalog\Helper\Category as CategoryHelper;
+use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator;
+use Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator;
+use Magento\CatalogUrlRewrite\Observer\UrlRewriteHandler;
+use Magento\CatalogUrlRewrite\Model\UrlRewriteBunchReplacer;
+use Magento\CatalogUrlRewrite\Model\Map\DatabaseMapPool;
+use Magento\CatalogUrlRewrite\Model\Map\DataCategoryUrlRewriteDatabaseMap;
+use Magento\CatalogUrlRewrite\Model\Map\DataProductUrlRewriteDatabaseMap;
+use Magento\Catalog\Model\ResourceModel\Product\Action as ProductAction;
+use Magento\Framework\App\State as AppState;
 
 abstract class RegenerateUrlRewritesAbstract extends Command
 {
@@ -37,11 +49,6 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_productCollectionFactory;
 
     /**
-     * @var \Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator
-     */
-    protected $_productUrlRewriteGenerator;
-
-    /**
      * @var \Magento\UrlRewrite\Model\UrlPersistInterface
      */
     protected $_urlPersist;
@@ -55,6 +62,41 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
+
+    /**
+     * @var \Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator
+     */
+    protected $_categoryUrlRewriteGenerator;
+
+    /**
+     * @var \Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator
+     */
+    protected $_productUrlRewriteGenerator;
+
+    /**
+     * @var \Magento\CatalogUrlRewrite\Model\UrlRewriteBunchReplacer
+     */
+    protected $_urlRewriteBunchReplacer;
+
+    /**
+     * @var \Magento\CatalogUrlRewrite\Observer\UrlRewriteHandler
+     */
+    protected $_urlRewriteHandler;
+
+    /**
+     * @var \Magento\CatalogUrlRewrite\Model\Map\DatabaseMapPool
+     */
+    protected $_databaseMapPool;
+
+    /**
+     * @var \Magento\Catalog\Model\ResourceModel\Product\Action
+     */
+    protected $_productAction;
+
+    /**
+     * @var array
+     */
+    protected $_dataUrlRewriteClassNames;
 
     /**
      * @var \Magento\Framework\App\State $appState
@@ -72,28 +114,49 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_runReindex = true;
 
     /**
-     * Constructor of RegenerateUrlRewrites
-     *
-     * @param \Magento\Framework\App\ResourceConnection $resource
-     * @param \Magento\Catalog\Model\ResourceModel\Category\CollectionFactory $categoryCollectionFactory
-     * @param \Magento\Catalog\Model\ResourceModel\Product\CollectionFactory $productCollectionFactory
-     * @param \Magento\Catalog\Helper\Category $categoryHelper
+     * 
+     * 
+     * @param ResourceConnection           $resource
+     * @param CategoryCollectionFactory    $categoryCollectionFactory
+     * @param ProductCollectionFactory     $productCollectionFactory
+     * @param UrlPersist                   $urlPersist
+     * @param CategoryHelper               $categoryHelper
+     * @param CategoryUrlRewriteGenerator  $categoryUrlRewriteGenerator
+     * @param UrlRewriteBunchReplacer      $urlRewriteBunchReplacer
+     * @param UrlRewriteHandler            $urlRewriteHandler
+     * @param DatabaseMapPool              $databaseMapPool
+     * @param array                        $dataUrlRewriteClassNames
+     * @param AppState                     $appState
      */
     public function __construct(
-        \Magento\Framework\App\ResourceConnection $resource,
-        \Magento\Catalog\Model\ResourceModel\Category\CollectionFactory $categoryCollectionFactory,
-        \Magento\Catalog\Model\ResourceModel\Product\CollectionFactory $productCollectionFactory,
-        \Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator $productUrlRewriteGenerator,
-        \Magento\UrlRewrite\Model\UrlPersistInterface $urlPersist,
-        \Magento\Catalog\Helper\Category $categoryHelper,
-        \Magento\Framework\App\State $appState
+        ResourceConnection $resource,
+        CategoryCollectionFactory $categoryCollectionFactory,
+        ProductCollectionFactory $productCollectionFactory,
+        UrlPersist $urlPersist,
+        CategoryHelper $categoryHelper,
+        CategoryUrlRewriteGenerator $categoryUrlRewriteGenerator,
+        ProductUrlRewriteGenerator $productUrlRewriteGenerator,
+        UrlRewriteBunchReplacer $urlRewriteBunchReplacer,
+        UrlRewriteHandler $urlRewriteHandler,
+        DatabaseMapPool $databaseMapPool,
+        ProductAction $productAction,
+        AppState $appState
     ) {
         $this->_resource = $resource;
         $this->_categoryCollectionFactory = $categoryCollectionFactory;
         $this->_productCollectionFactory = $productCollectionFactory;
-        $this->_productUrlRewriteGenerator = $productUrlRewriteGenerator;
         $this->_urlPersist = $urlPersist;
         $this->_categoryHelper = $categoryHelper;
+        $this->_categoryUrlRewriteGenerator = $categoryUrlRewriteGenerator;
+        $this->_productUrlRewriteGenerator = $productUrlRewriteGenerator;
+        $this->_urlRewriteHandler = $urlRewriteHandler;
+        $this->_urlRewriteBunchReplacer = $urlRewriteBunchReplacer;
+        $this->_databaseMapPool = $databaseMapPool;
+        $this->_productAction = $productAction;
+        $this->_dataUrlRewriteClassNames = [
+            DataCategoryUrlRewriteDatabaseMap::class,
+            DataProductUrlRewriteDatabaseMap::class
+        ];
         $this->_appState = $appState;
         parent::__construct();
     }
@@ -139,11 +202,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     }
 
     /**
-     * Regenerate URL rewrites
+     * Regenerate all URL rewrites
      * @param  integer $storeId
      * @return void
      */
-    abstract public function regenerateUrlRewrites($storeId = 0);
+    abstract public function regenerateAllUrlRewrites($storeId = 0);
 
     /**
      * Regenerate products range URL rewrites
@@ -151,18 +214,31 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @param  integer $storeId
      * @return void
      */
-    abstract public function regenerateProductsRangeUrlRewrites($productsFilter = [], $storeId = 0);
+    public function regenerateProductsRangeUrlRewrites($productsFilter = [], $storeId = 0)
+    {
+        $this->_output->writeln('To use this feature, please, purchase a Pro version.');
+    }
 
     /**
      * Remove all current Url rewrites of categories/products from DB
      * Use a sql queries to speed up
      *
      * @param array $storesList
+     * @param array $productsFilter
      * @return void
      */
-    public function removeAllUrlRewrites($storesList) {
-        $storeIds = implode(',', array_keys($storesList));
-        $sql = "DELETE FROM {$this->_resource->getTableName('url_rewrite')} WHERE `entity_type` IN ('category', 'product') AND `store_id` IN ({$storeIds});";
+    public function removeAllUrlRewrites($storesList, $productsFilter = []) {
+        $whereSuffix = [
+            "`entity_type` IN ('category', 'product')"
+        ];
+
+        if (count($storesList)) {
+            $storeIds = implode(',', array_keys($storesList));
+            $whereSuffix[] = "`store_id` IN ({$storeIds})";
+        }
+        
+        $whereSuffix = implode(' AND ', $whereSuffix);
+        $sql = "DELETE FROM {$this->_resource->getTableName('url_rewrite')} WHERE {$whereSuffix};";
         $this->_resource->getConnection()->query($sql);
 
         $sql = "DELETE FROM {$this->_resource->getTableName('catalog_url_rewrite_product_category')} WHERE `url_rewrite_id` NOT IN (
@@ -210,5 +286,35 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         }
 
         return $result;
+    }
+
+    /**
+     * Resets used data maps to free up memory and temporary tables
+     *
+     * @param Category $category
+     * @return void
+     */
+    protected function resetUrlRewritesDataMaps($category)
+    {
+        foreach ($this->_dataUrlRewriteClassNames as $className) {
+            $this->_databaseMapPool->resetMap($className, $category->getEntityId());
+        }
+    }
+
+    /**
+     * Display progress dots in console
+     * @param  string  $errorMsg
+     * @param  boolean $displayHint
+     * @return void
+     */
+    protected function displayProgressDots(&$step)
+    {
+        $step++;
+        $this->_output->write('.');
+        // max 30 dots in log line
+        if ($step > 29) {
+            $this->_output->writeln('');
+            $step = 0;
+        }
     }
 }

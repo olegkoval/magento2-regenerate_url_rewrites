@@ -4,11 +4,17 @@
  *
  * @package OlegKoval_RegenerateUrlRewrites
  * @author Oleg Koval <contact@olegkoval.com>
- * @copyright 2017 Oleg Koval
+ * @copyright 2018 Oleg Koval
  * @license OSL-3.0, AFL-3.0
  */
 
 namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
+
+if (class_exists('\OlegKoval\RegenerateUrlRewrites\Console\Command\RegenerateUrlRewritesPro')) {
+    abstract class RegenerateUrlRewritesLayer extends RegenerateUrlRewritesPro {}
+} else {
+    abstract class RegenerateUrlRewritesLayer extends RegenerateUrlRewritesAbstract {}
+}
 
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -16,7 +22,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
+class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
 {
     /**
      * @var null|Symfony\Component\Console\Output\OutputInterface
@@ -80,7 +86,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 
         // remove all current url rewrites
         if (count($storesList) > 0 && !$this->_saveOldUrls) {
-            $this->removeAllUrlRewrites($storesList);
+            $this->removeAllUrlRewrites($storesList, $productsFilter);
         }
 
         // set area code if needed
@@ -98,7 +104,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             if (count($productsFilter) > 0) {
                 $this->regenerateProductsRangeUrlRewrites($productsFilter, $storeId);
             } else {
-                $this->regenerateUrlRewrites($storeId);
+                $this->regenerateAllUrlRewrites($storeId);
             }
         }
 
@@ -117,9 +123,9 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
     }
 
     /**
-     * @see parent::regenerateUrlRewrites()
+     * @see parent::regenerateAllUrlRewrites()
      */
-    public function regenerateUrlRewrites($storeId = 0)
+    public function regenerateAllUrlRewrites($storeId = 0)
     {
         $step = 0;
 
@@ -132,46 +138,18 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 
         foreach ($categories as $category) {
             try {
-                // we use save() action to start all before/after 'save' events (includes a regenerating of url rewrites)
-                // and we set orig "url_key" as empty to pass checks if data was updated
-                $category->setStoreId($storeId);
-                $category->setOrigData('url_key', null);
-                $category->setData('url_key', null);
                 if ($this->_saveOldUrls) {
                     $category->setData('save_rewrites_history', true);
                 }
-                $category->save();
+                $category->setData('url_path', null)->setData('url_key', null)->setStoreId($storeId)->save();
 
-                $this->displayProgressDots($step);
-            } catch (\Exception $e) {
-                // debugging
-                $this->_output->writeln($e->getMessage());
-            }
-        }
-    }
+                $categoryUrlRewriteResult = $this->_categoryUrlRewriteGenerator->generate($category);
+                $this->_urlRewriteBunchReplacer->doBunchReplace($categoryUrlRewriteResult);
+                $productUrlRewriteResult = $this->_urlRewriteHandler->generateProductUrlRewrites($category);
+                $this->_urlRewriteBunchReplacer->doBunchReplace($productUrlRewriteResult);
 
-    /**
-     * @see parent::regenerateProductsRangeUrlRewrites()
-     */
-    public function regenerateProductsRangeUrlRewrites($productsFilter = [], $storeId = 0)
-    {
-        //get products collection
-        $products = $this->_productCollectionFactory->create()
-            ->addAttributeToSelect('*')
-            ->setStore($storeId)
-            ->addAttributeToFilter('entity_id', array('in' => $productsFilter));
-
-        foreach ($products as $product) {
-            try {
-                // we use save() action to start all before/after 'save' events (includes a regenerating of url rewrites)
-                // and we set orig "url_key" as empty to pass checks if data was updated
-                $product->setStoreId($storeId);
-                $product->setOrigData('url_key', '');
-                if ($this->_saveOldUrls) {
-                    $product->setData('save_rewrites_history', true);
-                }
-                $product->save();
-                // $this->_urlPersist->replace($this->_productUrlRewriteGenerator->generate($product));
+                //frees memory for maps that are self-initialized in multiple classes that were called by the generators
+                $this->resetUrlRewritesDataMaps($category);
 
                 $this->displayProgressDots($step);
             } catch (\Exception $e) {
@@ -197,22 +175,5 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         }
 
         $this->_output->writeln('Finished');
-    }
-
-    /**
-     * Display progress dots in console
-     * @param  string  $errorMsg
-     * @param  boolean $displayHint
-     * @return void
-     */
-    private function displayProgressDots(&$step)
-    {
-        $step++;
-        $this->_output->write('.');
-        // max 30 dots in log line
-        if ($step > 29) {
-            $this->_output->writeln('');
-            $step = 0;
-        }
     }
 }
