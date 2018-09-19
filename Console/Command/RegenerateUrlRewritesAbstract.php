@@ -114,8 +114,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_runReindex = true;
 
     /**
-     * 
-     * 
+     *
+     *
      * @param ResourceConnection           $resource
      * @param CategoryCollectionFactory    $categoryCollectionFactory
      * @param ProductCollectionFactory     $productCollectionFactory
@@ -132,14 +132,14 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         ResourceConnection $resource,
         CategoryCollectionFactory $categoryCollectionFactory,
         ProductCollectionFactory $productCollectionFactory,
-        UrlPersist $urlPersist,
-        CategoryHelper $categoryHelper,
-        CategoryUrlRewriteGenerator $categoryUrlRewriteGenerator,
-        ProductUrlRewriteGenerator $productUrlRewriteGenerator,
-        UrlRewriteBunchReplacer $urlRewriteBunchReplacer,
-        UrlRewriteHandler $urlRewriteHandler,
-        DatabaseMapPool $databaseMapPool,
-        ProductAction $productAction,
+        UrlPersist\Proxy $urlPersist,
+        CategoryHelper\Proxy $categoryHelper,
+        CategoryUrlRewriteGenerator\Proxy $categoryUrlRewriteGenerator,
+        ProductUrlRewriteGenerator\Proxy $productUrlRewriteGenerator,
+        UrlRewriteBunchReplacer\Proxy $urlRewriteBunchReplacer,
+        UrlRewriteHandler\Proxy $urlRewriteHandler,
+        DatabaseMapPool\Proxy $databaseMapPool,
+        ProductAction\Proxy $productAction,
         AppState $appState
     ) {
         $this->_resource = $resource;
@@ -236,7 +236,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
             $storeIds = implode(',', array_keys($storesList));
             $whereSuffix[] = "`store_id` IN ({$storeIds})";
         }
-        
+
         $whereSuffix = implode(' AND ', $whereSuffix);
         $sql = "DELETE FROM {$this->_resource->getTableName('url_rewrite')} WHERE {$whereSuffix};";
         $this->_resource->getConnection()->query($sql);
@@ -256,8 +256,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $result = [];
 
         $sql = $this->_resource->getConnection()->select()
-                    ->from($this->_resource->getTableName('store'), array('store_id', 'code'))
-                    ->order('store_id', 'ASC');
+            ->from($this->_resource->getTableName('store'), array('store_id', 'code'))
+            ->order('store_id', 'ASC');
 
         $queryResult = $this->_resource->getConnection()->fetchAll($sql);
 
