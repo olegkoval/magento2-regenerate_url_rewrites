@@ -15,6 +15,18 @@
             <argument name="commands" xsi:type="array">
                 <item name="ok:urlrewrites:regenerate" xsi:type="object">OlegKoval\RegenerateUrlRewrites\Console\Command\RegenerateUrlRewrites</item>
             </argument>
+            <argument name="resource" xsi:type="object">ResourceConnection\Proxy</argument>
+            <argument name="categoryCollectionFactory" xsi:type="object">CategoryCollectionFactory\Proxy</argument>
+            <argument name="productCollectionFactory" xsi:type="object">ProductCollectionFactory\Proxy</argument>
+            <argument name="urlPersist" xsi:type="object">UrlPersist\Proxy</argument>
+            <argument name="categoryHelper" xsi:type="object">CategoryHelper\Proxy</argument>
+            <argument name="categoryUrlRewriteGeneratorFactory" xsi:type="object">CategoryUrlRewriteGeneratorFactory\Proxy</argument>
+            <argument name="productUrlRewriteGeneratorFactory" xsi:type="object">ProductUrlRewriteGeneratorFactory\Proxy</argument>
+            <argument name="urlRewriteBunchReplacer" xsi:type="object">UrlRewriteBunchReplacer\Proxy</argument>
+            <argument name="urlRewriteHandlerFactory" xsi:type="object">UrlRewriteHandlerFactory\Proxy</argument>
+            <argument name="databaseMapPool" xsi:type="object">DatabaseMapPool\Proxy</argument>
+            <argument name="productActionFactory" xsi:type="object">ProductActionFactory\Proxy</argument>
+            <argument name="appState" xsi:type="object">AppState\Proxy</argument>
         </arguments>
     </type>
 </config>

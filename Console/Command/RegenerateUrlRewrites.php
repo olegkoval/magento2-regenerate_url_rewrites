@@ -119,6 +119,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
         $this->_output->writeln('Cache refreshing...');
         shell_exec('php bin/magento cache:clean');
         shell_exec('php bin/magento cache:flush');
+        $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh the cache.');
         $this->_output->writeln('Finished');
     }
 
@@ -143,9 +144,11 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
                 }
                 $category->setData('url_path', null)->setData('url_key', null)->setStoreId($storeId)->save();
 
-                $categoryUrlRewriteResult = $this->_categoryUrlRewriteGenerator->generate($category);
+                $this->resetCategoryProductsUrlKeyPath($category, $storeId);
+
+                $categoryUrlRewriteResult = $this->getCategoryUrlRewriteGenerator()->generate($category);
                 $this->_urlRewriteBunchReplacer->doBunchReplace($categoryUrlRewriteResult);
-                $productUrlRewriteResult = $this->_urlRewriteHandler->generateProductUrlRewrites($category);
+                $productUrlRewriteResult = $this->getUrlRewriteHandler()->generateProductUrlRewrites($category);
                 $this->_urlRewriteBunchReplacer->doBunchReplace($productUrlRewriteResult);
 
                 //frees memory for maps that are self-initialized in multiple classes that were called by the generators

@@ -4,9 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [unreleased] - 2018-09-19
+## [1.2.0] - 2018-09-25
 ### Changed
 - added proxies to CLI commands
+- modified logic of url rewrites regeneration
+- updated a composer file
+- fixed issue of a compatibility with new Magento Commerce versions
 
 ## [1.1.1] - 2018-09-10
 ### Changed

@@ -21,14 +21,14 @@ use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductColl
 use Magento\UrlRewrite\Model\UrlPersistInterface as UrlPersist;
 use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
 use Magento\Catalog\Helper\Category as CategoryHelper;
-use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator;
-use Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator;
-use Magento\CatalogUrlRewrite\Observer\UrlRewriteHandler;
+use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGeneratorFactory;
+use Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGeneratorFactory;
 use Magento\CatalogUrlRewrite\Model\UrlRewriteBunchReplacer;
+use Magento\CatalogUrlRewrite\Observer\UrlRewriteHandlerFactory;
 use Magento\CatalogUrlRewrite\Model\Map\DatabaseMapPool;
 use Magento\CatalogUrlRewrite\Model\Map\DataCategoryUrlRewriteDatabaseMap;
 use Magento\CatalogUrlRewrite\Model\Map\DataProductUrlRewriteDatabaseMap;
-use Magento\Catalog\Model\ResourceModel\Product\Action as ProductAction;
+use Magento\Catalog\Model\ResourceModel\Product\ActionFactory as ProductActionFactory;
 use Magento\Framework\App\State as AppState;
 
 abstract class RegenerateUrlRewritesAbstract extends Command
@@ -64,9 +64,19 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_storeManager;
 
     /**
+     * @var \Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGeneratorFactory
+     */
+    protected $_categoryUrlRewriteGeneratorFactory;
+
+    /**
      * @var \Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator
      */
     protected $_categoryUrlRewriteGenerator;
+
+    /**
+     * @var \Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGeneratorFactory
+     */
+    protected $_productUrlRewriteGeneratorFactory;
 
     /**
      * @var \Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator
@@ -79,6 +89,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_urlRewriteBunchReplacer;
 
     /**
+     * @var \Magento\CatalogUrlRewrite\Observer\UrlRewriteHandlerFactory
+     */
+    protected $_urlRewriteHandlerFactory;
+
+    /**
      * @var \Magento\CatalogUrlRewrite\Observer\UrlRewriteHandler
      */
     protected $_urlRewriteHandler;
@@ -87,6 +102,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @var \Magento\CatalogUrlRewrite\Model\Map\DatabaseMapPool
      */
     protected $_databaseMapPool;
+
+    /**
+     * @var \Magento\Catalog\Model\ResourceModel\Product\ActionFactory
+     */
+    protected $_productActionFactory;
 
     /**
      * @var \Magento\Catalog\Model\ResourceModel\Product\Action
@@ -121,9 +141,9 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @param ProductCollectionFactory     $productCollectionFactory
      * @param UrlPersist                   $urlPersist
      * @param CategoryHelper               $categoryHelper
-     * @param CategoryUrlRewriteGenerator  $categoryUrlRewriteGenerator
+     * @param CategoryUrlRewriteGenerator  $categoryUrlRewriteGeneratorFactory
      * @param UrlRewriteBunchReplacer      $urlRewriteBunchReplacer
-     * @param UrlRewriteHandler            $urlRewriteHandler
+     * @param UrlRewriteHandler            $urlRewriteHandlerFactory
      * @param DatabaseMapPool              $databaseMapPool
      * @param array                        $dataUrlRewriteClassNames
      * @param AppState                     $appState
@@ -132,14 +152,14 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         ResourceConnection $resource,
         CategoryCollectionFactory $categoryCollectionFactory,
         ProductCollectionFactory $productCollectionFactory,
-        UrlPersist\Proxy $urlPersist,
-        CategoryHelper\Proxy $categoryHelper,
-        CategoryUrlRewriteGenerator\Proxy $categoryUrlRewriteGenerator,
-        ProductUrlRewriteGenerator\Proxy $productUrlRewriteGenerator,
-        UrlRewriteBunchReplacer\Proxy $urlRewriteBunchReplacer,
-        UrlRewriteHandler\Proxy $urlRewriteHandler,
-        DatabaseMapPool\Proxy $databaseMapPool,
-        ProductAction\Proxy $productAction,
+        UrlPersist $urlPersist,
+        CategoryHelper $categoryHelper,
+        CategoryUrlRewriteGeneratorFactory $categoryUrlRewriteGeneratorFactory,
+        ProductUrlRewriteGeneratorFactory $productUrlRewriteGeneratorFactory,
+        UrlRewriteBunchReplacer $urlRewriteBunchReplacer,
+        UrlRewriteHandlerFactory $urlRewriteHandlerFactory,
+        DatabaseMapPool $databaseMapPool,
+        ProductActionFactory $productActionFactory,
         AppState $appState
     ) {
         $this->_resource = $resource;
@@ -147,12 +167,12 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_productCollectionFactory = $productCollectionFactory;
         $this->_urlPersist = $urlPersist;
         $this->_categoryHelper = $categoryHelper;
-        $this->_categoryUrlRewriteGenerator = $categoryUrlRewriteGenerator;
-        $this->_productUrlRewriteGenerator = $productUrlRewriteGenerator;
-        $this->_urlRewriteHandler = $urlRewriteHandler;
+        $this->_categoryUrlRewriteGeneratorFactory = $categoryUrlRewriteGeneratorFactory;
+        $this->_productUrlRewriteGeneratorFactory = $productUrlRewriteGeneratorFactory;
         $this->_urlRewriteBunchReplacer = $urlRewriteBunchReplacer;
+        $this->_urlRewriteHandlerFactory = $urlRewriteHandlerFactory;
         $this->_databaseMapPool = $databaseMapPool;
-        $this->_productAction = $productAction;
+        $this->_productActionFactory = $productActionFactory;
         $this->_dataUrlRewriteClassNames = [
             DataCategoryUrlRewriteDatabaseMap::class,
             DataProductUrlRewriteDatabaseMap::class
@@ -289,6 +309,54 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     }
 
     /**
+     * @return Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator
+     */
+    protected function getCategoryUrlRewriteGenerator()
+    {
+        if (is_null($this->_categoryUrlRewriteGenerator)) {
+            $this->_categoryUrlRewriteGenerator = $this->_categoryUrlRewriteGeneratorFactory->create();
+        }
+
+        return $this->_categoryUrlRewriteGenerator;
+    }
+
+    /**
+     * @return Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator
+     */
+    protected function getProductUrlRewriteGenerator()
+    {
+        if (is_null($this->_productUrlRewriteGenerator)) {
+            $this->_productUrlRewriteGenerator = $this->_productUrlRewriteGeneratorFactory->create();
+        }
+
+        return $this->_productUrlRewriteGenerator;
+    }
+
+    /**
+     * @return Magento\Catalog\Model\ResourceModel\Product\Action
+     */
+    protected function getProductAction()
+    {
+        if (is_null($this->_productAction)) {
+            $this->_productAction = $this->_productActionFactory->create();
+        }
+
+        return $this->_productAction;
+    }
+
+    /**
+     * @return Magento\Catalog\Model\ResourceModel\Product\Action
+     */
+    protected function getUrlRewriteHandler()
+    {
+        if (is_null($this->_urlRewriteHandler)) {
+            $this->_urlRewriteHandler = $this->_urlRewriteHandlerFactory->create();
+        }
+
+        return $this->_urlRewriteHandler;
+    }
+
+    /**
      * Resets used data maps to free up memory and temporary tables
      *
      * @param Category $category
@@ -302,6 +370,38 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     }
 
     /**
+     * Resets a products url_key and url_path
+     *
+     * @param Category $category
+     * @return void
+     */
+    protected function resetCategoryProductsUrlKeyPath($category, $storeId)
+    {
+        $productCollection = $this->_productCollectionFactory->create();
+
+        $productCollection->addCategoriesFilter(['eq' => [$category->getEntityId()]])
+            ->setStoreId($storeId)
+            ->addAttributeToSelect('entity_id');
+
+        $productCollection->setPageSize(100);
+        $pageCount = $productCollection->getLastPageNumber();
+        $currentPage = 1;
+
+        while ($currentPage <= $pageCount) {
+            $productCollection->setCurPage($currentPage);
+            
+            $this->getProductAction()->updateAttributes(
+                $productCollection->getAllIds(),
+                ['url_path' => null, 'url_key' => null],
+                $storeId
+            );
+
+            $productCollection->clear();
+            $currentPage++;
+        }
+    }
+
+    /**
      * Display progress dots in console
      * @param  string  $errorMsg
      * @param  boolean $displayHint
@@ -311,8 +411,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     {
         $step++;
         $this->_output->write('.');
-        // max 30 dots in log line
-        if ($step > 29) {
+        // max 70 dots in log line
+        if ($step > 69) {
             $this->_output->writeln('');
             $step = 0;
         }
