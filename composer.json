@@ -21,7 +21,7 @@
         "magento/module-catalog": "101.0.*",
         "magento/module-catalog-url-rewrite": "100.1.*",
         "magento/module-url-rewrite": "100.1.*",
-        "magento/framework": "100.1.*",
+        "magento/framework": "100.1.*"
     },
     "autoload": {
         "files": [
