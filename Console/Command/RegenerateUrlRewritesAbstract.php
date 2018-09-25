@@ -134,33 +134,33 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_runReindex = true;
 
     /**
-     *
-     *
-     * @param ResourceConnection           $resource
-     * @param CategoryCollectionFactory    $categoryCollectionFactory
-     * @param ProductCollectionFactory     $productCollectionFactory
-     * @param UrlPersist                   $urlPersist
-     * @param CategoryHelper               $categoryHelper
-     * @param CategoryUrlRewriteGenerator  $categoryUrlRewriteGeneratorFactory
-     * @param UrlRewriteBunchReplacer      $urlRewriteBunchReplacer
-     * @param UrlRewriteHandler            $urlRewriteHandlerFactory
-     * @param DatabaseMapPool              $databaseMapPool
-     * @param array                        $dataUrlRewriteClassNames
-     * @param AppState                     $appState
+     * Constructor
+     * @param ResourceConnection                       $resource
+     * @param CategoryCollectionFactory                $categoryCollectionFactory
+     * @param ProductCollectionFactory                 $productCollectionFactory
+     * @param UrlPersist\Proxy                         $urlPersist
+     * @param CategoryHelper\Proxy                     $categoryHelper
+     * @param CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory
+     * @param ProductUrlRewriteGeneratorFactory\Proxy  $productUrlRewriteGeneratorFactory
+     * @param UrlRewriteBunchReplacer\Proxy            $urlRewriteBunchReplacer
+     * @param UrlRewriteHandlerFactory\Proxy           $urlRewriteHandlerFactory
+     * @param DatabaseMapPool\Proxy                    $databaseMapPool
+     * @param ProductActionFactory\Proxy               $productActionFactory
+     * @param AppState\Proxy                           $appState
      */
     public function __construct(
         ResourceConnection $resource,
         CategoryCollectionFactory $categoryCollectionFactory,
         ProductCollectionFactory $productCollectionFactory,
-        UrlPersist $urlPersist,
-        CategoryHelper $categoryHelper,
-        CategoryUrlRewriteGeneratorFactory $categoryUrlRewriteGeneratorFactory,
-        ProductUrlRewriteGeneratorFactory $productUrlRewriteGeneratorFactory,
-        UrlRewriteBunchReplacer $urlRewriteBunchReplacer,
-        UrlRewriteHandlerFactory $urlRewriteHandlerFactory,
-        DatabaseMapPool $databaseMapPool,
-        ProductActionFactory $productActionFactory,
-        AppState $appState
+        UrlPersist\Proxy $urlPersist,
+        CategoryHelper\Proxy $categoryHelper,
+        CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory,
+        ProductUrlRewriteGeneratorFactory\Proxy $productUrlRewriteGeneratorFactory,
+        UrlRewriteBunchReplacer\Proxy $urlRewriteBunchReplacer,
+        UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory,
+        DatabaseMapPool\Proxy $databaseMapPool,
+        ProductActionFactory\Proxy $productActionFactory,
+        AppState\Proxy $appState
     ) {
         $this->_resource = $resource;
         $this->_categoryCollectionFactory = $categoryCollectionFactory;

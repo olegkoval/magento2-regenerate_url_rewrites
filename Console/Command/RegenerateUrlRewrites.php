@@ -119,7 +119,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
         $this->_output->writeln('Cache refreshing...');
         shell_exec('php bin/magento cache:clean');
         shell_exec('php bin/magento cache:flush');
-        $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh the cache.');
+        $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh this external cache.');
         $this->_output->writeln('Finished');
     }
 
