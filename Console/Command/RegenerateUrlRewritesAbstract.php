@@ -379,9 +379,10 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     {
         $productCollection = $this->_productCollectionFactory->create();
 
-        $productCollection->addCategoriesFilter(['eq' => [$category->getEntityId()]])
-            ->setStoreId($storeId)
-            ->addAttributeToSelect('entity_id');
+        $productCollection->setStoreId($storeId);
+        $productCollection->addAttributeToSelect('entity_id');
+        $productCollection->addCategoriesFilter(['eq' => [$category->getEntityId()]]);
+            
 
         $productCollection->setPageSize(100);
         $pageCount = $productCollection->getLastPageNumber();
