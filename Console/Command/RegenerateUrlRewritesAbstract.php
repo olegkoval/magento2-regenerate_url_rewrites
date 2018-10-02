@@ -378,13 +378,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected function resetCategoryProductsUrlKeyPath($category, $storeId)
     {
         $productCollection = $this->_productCollectionFactory->create();
-
         $productCollection->setStoreId($storeId);
         $productCollection->addAttributeToSelect('entity_id');
         $productCollection->addCategoriesFilter(['eq' => [$category->getEntityId()]]);
-            
-
         $productCollection->setPageSize(100);
+
         $pageCount = $productCollection->getLastPageNumber();
         $currentPage = 1;
 
