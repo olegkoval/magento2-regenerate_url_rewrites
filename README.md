@@ -53,7 +53,9 @@ or
 ## HOW TO USE DEBUG INFORMATION:
 If you see in the console log a message(-s) like this:
 >`URL key for specified store already exists. Product ID: 1680. Request path: modelautos/schaal/revell-honda-nsx-1990-grijs-1-18.html`
+
 or
+
 >`URL key for specified store already exists. Category ID: 359. Request path: modelautos/automerk/filmauto.html`
 
 Then you can find a product (or category) by provided ID and copy product (or category) name. After that you can search in the store for the product (or category) with same name and resolve conflict by updating/changing name of one of the products (or categories).
