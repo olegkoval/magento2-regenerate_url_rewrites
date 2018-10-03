@@ -43,6 +43,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
         $storesList = $productsFilter = [];
 
         $this->_output->writeln('Regenerating of URL rewrites:');
+        $this->_showSupportMe();
 
         $options = $input->getOptions();
         if (isset($options[self::INPUT_KEY_SAVE_REWRITES_HISTORY]) && $options[self::INPUT_KEY_SAVE_REWRITES_HISTORY] === true) {
@@ -128,12 +129,13 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
      */
     public function regenerateAllUrlRewrites($storeId = 0)
     {
-        $step = 0;
+        $this->_step = 0;
 
         // get categories collection
         $categories = $this->_categoryCollectionFactory->create()
             ->addAttributeToSelect('*')
             ->setStore($storeId)
+            ->addAttributeToFilter('is_active','1')
             ->addFieldToFilter('level', array('gt' => '1'))
             ->setOrder('level', 'DESC');
 
@@ -145,19 +147,21 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
                 $category->setData('url_path', null)->setData('url_key', null)->setStoreId($storeId)->save();
 
                 $this->resetCategoryProductsUrlKeyPath($category, $storeId);
+            } catch (\Exception $e) {
+                // debugging
+                $this->_displayExceptionMsg('Exception #1: '. $e->getMessage() .' Category ID: '. $category->getId());
+            }
 
-                $categoryUrlRewriteResult = $this->getCategoryUrlRewriteGenerator()->generate($category);
-                $this->_urlRewriteBunchReplacer->doBunchReplace($categoryUrlRewriteResult);
-                $productUrlRewriteResult = $this->getUrlRewriteHandler()->generateProductUrlRewrites($category);
-                $this->_urlRewriteBunchReplacer->doBunchReplace($productUrlRewriteResult);
+            $this->_regenerateCategoryUrlRewrites($category);
 
+            try {
                 //frees memory for maps that are self-initialized in multiple classes that were called by the generators
                 $this->resetUrlRewritesDataMaps($category);
 
-                $this->displayProgressDots($step);
+                $this->_displayProgressDots();
             } catch (\Exception $e) {
                 // debugging
-                $this->_output->writeln($e->getMessage());
+                $this->_displayExceptionMsg('Exception #3: '. $e->getMessage() .' Category ID: '. $category->getId());
             }
         }
     }

@@ -3,6 +3,11 @@
 Magento 2 "Regenerate Url rewrites" extension add a CLI feature which allow to regenerate a Url rewrites of products/categories in all stores or specific store.
 Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrites
 
+## DONATIONS / SUPPORTING ME
+You can support me here:
+* https://www.patreon.com/olegkoval
+* https://www.liqpay.ua/en/checkout/card/380983346262
+
 ## INSTALLATION
 
 ### COMPOSER INSTALLATION
@@ -44,6 +49,14 @@ or
 >`$> bin/magento ok:urlrewrites:regenerate 2 --save-old-urls`
 or
 >`$> bin/magento ok:urlrewrites:regenerate --storeId=2 --save-old-urls`
+
+## HOW TO USE DEBUG INFORMATION:
+If you see in the console log a message(-s) like this:
+>`URL key for specified store already exists. Product ID: 1680. Request path: modelautos/schaal/revell-honda-nsx-1990-grijs-1-18.html`
+or
+>`URL key for specified store already exists. Category ID: 359. Request path: modelautos/automerk/filmauto.html`
+
+Then you can find a product (or category) by provided ID and copy product (or category) name. After that you can search in the store for the product (or category) with same name and resolve conflict by updating/changing name of one of the products (or categories).
 
 Enjoy!
 

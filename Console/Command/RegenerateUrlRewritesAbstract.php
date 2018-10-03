@@ -134,6 +134,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_runReindex = true;
 
     /**
+     * @var integer
+     */
+    protected $_step = 0;
+
+    /**
      * Constructor
      * @param ResourceConnection                       $resource
      * @param CategoryCollectionFactory                $categoryCollectionFactory
@@ -219,6 +224,21 @@ abstract class RegenerateUrlRewritesAbstract extends Command
                     'Products range, e.g.: 101-152'
                 )
             ]);
+    }
+
+    /**
+     * Display a support/donate information
+     * @return void
+     */
+    protected function _showSupportMe()
+    {
+        $this->_output->writeln('');
+        $this->_output->writeln('----------------------------------------------------');
+        $this->_output->writeln('You can support me here:');
+        $this->_output->writeln('https://www.patreon.com/olegkoval');
+        $this->_output->writeln('https://www.liqpay.ua/en/checkout/card/380983346262');
+        $this->_output->writeln('----------------------------------------------------');
+        $this->_output->writeln('');
     }
 
     /**
@@ -402,18 +422,66 @@ abstract class RegenerateUrlRewritesAbstract extends Command
 
     /**
      * Display progress dots in console
-     * @param  string  $errorMsg
-     * @param  boolean $displayHint
      * @return void
      */
-    protected function displayProgressDots(&$step)
+    protected function _displayProgressDots()
     {
-        $step++;
+        $this->_step++;
         $this->_output->write('.');
         // max 70 dots in log line
-        if ($step > 69) {
+        if ($this->_step > 69) {
             $this->_output->writeln('');
-            $step = 0;
+            $this->_step = 0;
+        }
+    }
+
+    /**
+     * Display Exception message
+     * @param  string $msg
+     * @return void
+     */
+    protected function _displayExceptionMsg($msg)
+    {
+        $this->_output->writeln('');
+        $this->_output->writeln($msg);
+        $this->_step = 0;
+    }
+
+    /**
+     * Regenerate category and category products Url Rewrites
+     * @param  \Magento\Catalog\Api\Data\CategoryInterface|\Magento\Framework\Model\AbstractModel $category
+     * @return void
+     */
+    protected function _regenerateCategoryUrlRewrites($category)
+    {
+        try {
+            $categoryUrlRewriteResult = $this->getCategoryUrlRewriteGenerator()->generate($category);
+            $this->_doBunchReplaceUrlRewrites($categoryUrlRewriteResult);
+
+            $productUrlRewriteResult = $this->getUrlRewriteHandler()->generateProductUrlRewrites($category);
+            $this->_doBunchReplaceUrlRewrites($productUrlRewriteResult, 'Product');
+        } catch (\Exception $e) {
+            // debugging
+            $this->_displayExceptionMsg('Exception: '. $e->getMessage() .' Category ID: '. $category->getId());
+        }
+    }
+
+    /**
+     * Do a bunch replace of url rewrites
+     * @param  array  $urlRewrites
+     * @param  string $type
+     * @return void
+     */
+    protected function _doBunchReplaceUrlRewrites($urlRewrites = array(), $type = 'Category')
+    {
+        foreach ($urlRewrites as $singleUrlRewrite) {
+            try {
+                $this->_urlRewriteBunchReplacer->doBunchReplace(array($singleUrlRewrite));
+            } catch (\Exception $y) {
+                // debugging
+                $data = $singleUrlRewrite->toArray();
+                $this->_displayExceptionMsg($y->getMessage() .' '. $type .' ID: '. $data['entity_id'] .'. Request path: '. $data['request_path']);
+            }
         }
     }
 }
