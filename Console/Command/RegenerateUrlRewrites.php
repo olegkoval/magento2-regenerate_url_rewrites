@@ -85,9 +85,17 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
             return;
         }
 
+        // get category filter
+        $this->onlyCategories = (bool) $input->getOption(self::INPUT_KEY_ONLY_CATEGORIES);
+        if ($this->onlyCategories) {
+            $this->_dataUrlRewriteClassNames = [
+                DataCategoryUrlRewriteDatabaseMap::class
+            ];
+        }
+
         // remove all current url rewrites
         if (count($storesList) > 0 && !$this->_saveOldUrls) {
-            $this->removeAllUrlRewrites($storesList, $productsFilter);
+            $this->removeAllUrlRewrites($storesList, $productsFilter, $this->onlyCategories ? 'category' : null);
         }
 
         // set area code if needed
@@ -146,7 +154,9 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
                 }
                 $category->setData('url_path', null)->setData('url_key', null)->setStoreId($storeId)->save();
 
-                $this->resetCategoryProductsUrlKeyPath($category, $storeId);
+                if (!$this->onlyCategories) {
+                    $this->resetCategoryProductsUrlKeyPath($category, $storeId);
+                }
             } catch (\Exception $e) {
                 // debugging
                 $this->_displayExceptionMsg('Exception #1: '. $e->getMessage() .' Category ID: '. $category->getId());

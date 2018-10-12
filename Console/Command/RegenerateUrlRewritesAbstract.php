@@ -34,6 +34,7 @@ use Magento\Framework\App\State as AppState;
 abstract class RegenerateUrlRewritesAbstract extends Command
 {
     const INPUT_KEY_STOREID = 'storeId';
+    const INPUT_KEY_ONLY_CATEGORIES = 'onlyCategories';
     const INPUT_KEY_SAVE_REWRITES_HISTORY = 'save-old-urls';
     const INPUT_KEY_NO_REINDEX = 'no-reindex';
     const INPUT_KEY_PRODUCTS_RANGE = 'products-range';
@@ -138,6 +139,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      */
     protected $_step = 0;
 
+    protected $onlyCategories = false;
+
     /**
      * Constructor
      * @param ResourceConnection                       $resource
@@ -206,6 +209,12 @@ abstract class RegenerateUrlRewritesAbstract extends Command
                     'Specific store id'
                 ),
                 new InputOption(
+                    self::INPUT_KEY_ONLY_CATEGORIES,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Only generate URL rewrites for categories'
+                ),
+                new InputOption(
                     self::INPUT_KEY_SAVE_REWRITES_HISTORY,
                     null,
                     InputOption::VALUE_NONE,
@@ -265,11 +274,15 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      *
      * @param array $storesList
      * @param array $productsFilter
+     * @param string|array $entityTypeFilter
      * @return void
      */
-    public function removeAllUrlRewrites($storesList, $productsFilter = []) {
+    public function removeAllUrlRewrites($storesList, $productsFilter = [], $entityTypeFilter = null) {
+        if ($entityTypeFilter === null) {
+            $entityTypeFilter = ['category','product'];
+        }
         $whereSuffix = [
-            "`entity_type` IN ('category', 'product')"
+            "`entity_type` IN ('" . implode("','", (array) $entityTypeFilter) . "')"
         ];
 
         if (count($storesList)) {
@@ -458,8 +471,10 @@ abstract class RegenerateUrlRewritesAbstract extends Command
             $categoryUrlRewriteResult = $this->getCategoryUrlRewriteGenerator()->generate($category);
             $this->_doBunchReplaceUrlRewrites($categoryUrlRewriteResult);
 
-            $productUrlRewriteResult = $this->getUrlRewriteHandler()->generateProductUrlRewrites($category);
-            $this->_doBunchReplaceUrlRewrites($productUrlRewriteResult, 'Product');
+            if (!$this->onlyCategories) {
+                $productUrlRewriteResult = $this->getUrlRewriteHandler()->generateProductUrlRewrites($category);
+                $this->_doBunchReplaceUrlRewrites($productUrlRewriteResult, 'Product');
+            }
         } catch (\Exception $e) {
             // debugging
             $this->_displayExceptionMsg('Exception: '. $e->getMessage() .' Category ID: '. $category->getId());
