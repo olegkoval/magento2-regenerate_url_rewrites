@@ -45,6 +45,12 @@ or
 * to do not run full reindex at the end of Url rewrites generation:
 >`$> bin/magento ok:urlrewrites:regenerate --no-reindex`
 
+* to do not run cache:clean at the end of Url rewrites generation:
+>`$> bin/magento ok:urlrewrites:regenerate --no-cache-clean`
+
+* to do not run cache:flush at the end of Url rewrites generation:
+>`$> bin/magento ok:urlrewrites:regenerate --no-cache-flush`
+
 * also you can combine a options:
 >`$> bin/magento ok:urlrewrites:regenerate 2 --save-old-urls`
 or
