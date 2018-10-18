@@ -54,6 +54,10 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
             $this->_runReindex = false;
         }
 
+        if (isset($options[self::INPUT_KEY_NO_PROGRESS]) && $options[self::INPUT_KEY_NO_PROGRESS] === true) {
+            $this->_showProgress = false;
+        }
+
         if (isset($options[self::INPUT_KEY_PRODUCTS_RANGE])) {
             $productsFilter = $this->generateProductsIdsRange($options[self::INPUT_KEY_PRODUCTS_RANGE]);
         }
