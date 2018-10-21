@@ -36,6 +36,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     const INPUT_KEY_STOREID = 'storeId';
     const INPUT_KEY_SAVE_REWRITES_HISTORY = 'save-old-urls';
     const INPUT_KEY_NO_REINDEX = 'no-reindex';
+    const INPUT_KEY_NO_PROGRESS = 'no-progress';
     const INPUT_KEY_NO_CACHE_FLUSH = 'no-cache-flush';
     const INPUT_KEY_NO_CACHE_CLEAN = 'no-cache-clean';
     const INPUT_KEY_PRODUCTS_RANGE = 'products-range';
@@ -138,6 +139,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     /**
      * @var boolean
      */
+    protected $_showProgress = true;
+
+    /**
+     * @var boolean
+     */
     protected $_runCacheClean = true;
 
     /**
@@ -228,6 +234,12 @@ abstract class RegenerateUrlRewritesAbstract extends Command
                     null,
                     InputOption::VALUE_NONE,
                     'Do not run reindex when URL rewrites are generated.'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_PROGRESS,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not show progress indicator.'
                 ),
                 new InputOption(
                     self::INPUT_KEY_NO_CACHE_FLUSH,
@@ -450,6 +462,9 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      */
     protected function _displayProgressDots()
     {
+        if (!$this->_showProgress) {
+            return;
+        }
         $this->_step++;
         $this->_output->write('.');
         // max 70 dots in log line
