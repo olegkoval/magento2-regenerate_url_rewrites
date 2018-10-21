@@ -54,8 +54,17 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
             $this->_runReindex = false;
         }
 
+
         if (isset($options[self::INPUT_KEY_NO_PROGRESS]) && $options[self::INPUT_KEY_NO_PROGRESS] === true) {
             $this->_showProgress = false;
+        }
+
+        if (isset($options[self::INPUT_KEY_NO_CACHE_CLEAN]) && $options[self::INPUT_KEY_NO_CACHE_CLEAN] === true) {
+            $this->_runCacheClean = false;
+        }
+
+        if (isset($options[self::INPUT_KEY_NO_CACHE_FLUSH]) && $options[self::INPUT_KEY_NO_CACHE_FLUSH] === true) {
+            $this->_runCacheFlush = false;
         }
 
         if (isset($options[self::INPUT_KEY_PRODUCTS_RANGE])) {
@@ -116,15 +125,20 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
         $this->_output->writeln('');
         $this->_output->writeln('');
 
-        if ($this->_runReindex == true) {
+        if ($this->_runReindex) {
             $this->_output->writeln('Reindexation...');
             shell_exec('php bin/magento indexer:reindex');
         }
-
-        $this->_output->writeln('Cache refreshing...');
-        shell_exec('php bin/magento cache:clean');
-        shell_exec('php bin/magento cache:flush');
-        $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh this external cache.');
+        if ($this->_runCacheClean || $this->_runCacheFlush) {
+            $this->_output->writeln('Cache refreshing...');
+            if ($this->_runCacheClean) {
+                shell_exec('php bin/magento cache:clean');
+            }
+            if ($this->_runCacheFlush) {
+                shell_exec('php bin/magento cache:flush');
+            }
+            $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh this external cache.');
+        }
         $this->_output->writeln('Finished');
     }
 
