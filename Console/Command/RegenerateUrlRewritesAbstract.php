@@ -33,10 +33,14 @@ use Magento\Framework\App\State as AppState;
 
 abstract class RegenerateUrlRewritesAbstract extends Command
 {
-    const INPUT_KEY_STOREID = 'storeId';
+    const INPUT_KEY_STOREID               = 'storeId';
     const INPUT_KEY_SAVE_REWRITES_HISTORY = 'save-old-urls';
-    const INPUT_KEY_NO_REINDEX = 'no-reindex';
-    const INPUT_KEY_PRODUCTS_RANGE = 'products-range';
+    const INPUT_KEY_NO_REINDEX            = 'no-reindex';
+    const INPUT_KEY_CATEGORIES_RANGE      = 'categories-range';
+    const INPUT_KEY_PRODUCTS_RANGE        = 'products-range';
+    const INPUT_KEY_CATEGORY_ID           = 'category-id';
+    const INPUT_KEY_PRODUCT_ID            = 'product-id';
+    const CONSOLE_LOG_MAX_DOTS_IN_LINE    = 70;
 
     /**
      * @var \Magento\Catalog\Model\ResourceModel\Category\CollectionFactory
@@ -124,19 +128,24 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_appState;
 
     /**
-     * @var boolean
+     * @var integer
      */
-    protected $_saveOldUrls = false;
-
-    /**
-     * @var boolean
-     */
-    protected $_runReindex = true;
+    protected $_step = 0;
 
     /**
      * @var integer
      */
-    protected $_step = 0;
+    protected $_collectionPageSize = 100;
+
+    /**
+     * @var array
+     */
+    protected $_commandOptions = [];
+
+    /**
+     * @var array
+     */
+    protected $_errors = [];
 
     /**
      * Constructor
@@ -218,12 +227,87 @@ abstract class RegenerateUrlRewritesAbstract extends Command
                     'Do not run reindex when URL rewrites are generated.'
                 ),
                 new InputOption(
+                    self::INPUT_KEY_CATEGORIES_RANGE,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Categories ID range, e.g.: 15-40'
+                ),
+                new InputOption(
                     self::INPUT_KEY_PRODUCTS_RANGE,
                     null,
                     InputArgument::OPTIONAL,
-                    'Products range, e.g.: 101-152'
+                    'Products ID range, e.g.: 101-152'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_CATEGORY_ID,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Specific category ID, e.g.: 123'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_CATEGORY_ID,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Specific product ID, e.g.: 107'
                 )
             ]);
+    }
+
+    /**
+     * Regenerate all URL rewrites
+     * @param  integer $storeId
+     * @return void
+     */
+    abstract public function regenerateAllUrlRewrites($storeId = 0);
+
+    /**
+     * Get command options
+     * @return void
+     */
+    abstract public function getCommandOptions();
+
+    /**
+     * Regenerate URL rewrites for a categories range 
+     * @param  array $categoriesFilter
+     * @param  integer $storeId
+     * @return void
+     */
+    public function regenerateCategoriesRangeUrlRewrites($categoriesFilter = [], $storeId = 0)
+    {
+        $this->_output->writeln('To use this feature, please, purchase a Pro version.');
+    }
+
+    /**
+     * Regenerate URL rewrites for a products range 
+     * @param  array $productsFilter
+     * @param  integer $storeId
+     * @return void
+     */
+    public function regenerateProductsRangeUrlRewrites($productsFilter = [], $storeId = 0)
+    {
+        $this->_output->writeln('To use this feature, please, purchase a Pro version.');
+    }
+
+    /**
+     * Regenerate URL rewrites for a specific category + products from this category
+     * @param  array $categoryId
+     * @param  integer $storeId
+     * @return void
+     */
+    public function regenerateSpecificCategoryUrlRewrites($categoryId, $storeId = 0)
+    {
+        $this->_output->writeln('To use this feature, please, purchase a Pro version.');
+    }
+
+    /**
+     * Regenerate URL rewrites for a specific product
+     * @param  array $productId
+     * @param  integer $storeId
+     * @return void
+     */
+    public function regenerateSpecificProductUrlRewrites($productId, $storeId = 0)
+    {
+        $this->_output->writeln('To use this feature, please, purchase a Pro version.');
     }
 
     /**
@@ -242,24 +326,6 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     }
 
     /**
-     * Regenerate all URL rewrites
-     * @param  integer $storeId
-     * @return void
-     */
-    abstract public function regenerateAllUrlRewrites($storeId = 0);
-
-    /**
-     * Regenerate products range URL rewrites
-     * @param  array $productsFilter
-     * @param  integer $storeId
-     * @return void
-     */
-    public function regenerateProductsRangeUrlRewrites($productsFilter = [], $storeId = 0)
-    {
-        $this->_output->writeln('To use this feature, please, purchase a Pro version.');
-    }
-
-    /**
      * Remove all current Url rewrites of categories/products from DB
      * Use a sql queries to speed up
      *
@@ -267,7 +333,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @param array $productsFilter
      * @return void
      */
-    public function removeAllUrlRewrites($storesList, $productsFilter = []) {
+    protected function _removeAllUrlRewrites($storesList, $productsFilter = []) {
         $whereSuffix = [
             "`entity_type` IN ('category', 'product')"
         ];
@@ -292,7 +358,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      *
      * @return array
      */
-    public function getAllStoreIds() {
+    protected function _getAllStoreIds() {
         $result = [];
 
         $sql = $this->_resource->getConnection()->select()
@@ -309,20 +375,37 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     }
 
     /**
-     * Generate range of products ID's
-     * @param  string $productsRange
+     * Generate range of ID's
+     * @param  string $idsRange
+     * @param  string $type
      * @return array
      */
-    public function generateProductsIdsRange($productsRange)
+    protected function _generateIdsRangeArray($idsRange, $type = 'product')
     {
-        $result = [];
+        $result = $tmpIds = [];
 
-        list($start, $end) = explode('-', $productsRange, 2);
+        list($start, $end) = array_map('intval', explode('-', $idsRange, 2));
 
-        if ($start > 0 && $end > 0 && $end >= $start) {
-            for ($productId = $start; $productId <= $end; $productId++) {
-                $result[] = $productId;
-            }
+        if ($end < $start) $end = $start;
+
+        for ($id = $start; $id <= $end; $id++) {
+            $tmpIds[] = $id;
+        }
+
+        // get existed Id's from this range in entity DB table
+        $tableName = $this->_resource->getTableName('catalog_'. $type .'_entity');
+        $ids = implode(', ', $tmpIds);
+        $sql = "SELECT entity_id FROM {$tableName} WHERE entity_id IN ({$ids}) ORDER BY entity_id";
+
+        $queryResult = $this->_resource->getConnection()->fetchAll($sql);
+
+        foreach ($queryResult as $row) {
+            $result[] = (int)$row['entity_id'];
+        }
+
+        // if not entity_id in this range - show error
+        if (count($result) == 0) {
+            $this->_errors[] = __("ERROR: %type ID's in this range not exists", ['type' => ucfirst($type)]);
         }
 
         return $result;
@@ -331,7 +414,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     /**
      * @return Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator
      */
-    protected function getCategoryUrlRewriteGenerator()
+    protected function _getCategoryUrlRewriteGenerator()
     {
         if (is_null($this->_categoryUrlRewriteGenerator)) {
             $this->_categoryUrlRewriteGenerator = $this->_categoryUrlRewriteGeneratorFactory->create();
@@ -343,7 +426,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     /**
      * @return Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator
      */
-    protected function getProductUrlRewriteGenerator()
+    protected function _getProductUrlRewriteGenerator()
     {
         if (is_null($this->_productUrlRewriteGenerator)) {
             $this->_productUrlRewriteGenerator = $this->_productUrlRewriteGeneratorFactory->create();
@@ -355,7 +438,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     /**
      * @return Magento\Catalog\Model\ResourceModel\Product\Action
      */
-    protected function getProductAction()
+    protected function _getProductAction()
     {
         if (is_null($this->_productAction)) {
             $this->_productAction = $this->_productActionFactory->create();
@@ -367,7 +450,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     /**
      * @return Magento\Catalog\Model\ResourceModel\Product\Action
      */
-    protected function getUrlRewriteHandler()
+    protected function _getUrlRewriteHandler()
     {
         if (is_null($this->_urlRewriteHandler)) {
             $this->_urlRewriteHandler = $this->_urlRewriteHandlerFactory->create();
@@ -382,11 +465,35 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @param Category $category
      * @return void
      */
-    protected function resetUrlRewritesDataMaps($category)
+    protected function _resetUrlRewritesDataMaps($category)
     {
         foreach ($this->_dataUrlRewriteClassNames as $className) {
             $this->_databaseMapPool->resetMap($className, $category->getEntityId());
         }
+    }
+
+    /**
+     * Get categories collection
+     * @param  integer $storeId
+     * @param  array   $categoriesFilter
+     * @return collection
+     */
+    protected function _getCategoriesCollection($storeId = 0, $categoriesFilter = [])
+    {
+        // get categories collection
+        $categoriesCollection = $this->_categoryCollectionFactory->create()
+            ->addAttributeToSelect('*')
+            ->setStore($storeId)
+            ->addFieldToFilter('level', array('gt' => '1'))
+            ->setOrder('level', 'DESC')
+            // use limit to avoid a "eating" of a memory
+            ->setPageSize($this->_collectionPageSize);
+
+        if (count($categoriesFilter) > 0) {
+            $categoriesCollection->addAttributeToFilter('entity_id', array('in' => $categoriesFilter));
+        }
+
+        return $categoriesCollection;
     }
 
     /**
@@ -395,13 +502,13 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @param Category $category
      * @return void
      */
-    protected function resetCategoryProductsUrlKeyPath($category, $storeId)
+    protected function _resetCategoryProductsUrlKeyPath($category, $storeId)
     {
         $productCollection = $this->_productCollectionFactory->create();
         $productCollection->setStoreId($storeId);
         $productCollection->addAttributeToSelect('entity_id');
         $productCollection->addCategoriesFilter(['eq' => [$category->getEntityId()]]);
-        $productCollection->setPageSize(100);
+        $productCollection->setPageSize($this->_collectionPageSize);
 
         $pageCount = $productCollection->getLastPageNumber();
         $currentPage = 1;
@@ -409,7 +516,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         while ($currentPage <= $pageCount) {
             $productCollection->setCurPage($currentPage);
             
-            $this->getProductAction()->updateAttributes(
+            $this->_getProductAction()->updateAttributes(
                 $productCollection->getAllIds(),
                 ['url_path' => null, 'url_key' => null],
                 $storeId
@@ -428,41 +535,73 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     {
         $this->_step++;
         $this->_output->write('.');
-        // max 70 dots in log line
-        if ($this->_step > 69) {
+
+        if ($this->_step > self::CONSOLE_LOG_MAX_DOTS_IN_LINE) {
             $this->_output->writeln('');
             $this->_step = 0;
         }
     }
 
     /**
-     * Display Exception message
+     * Display message in console
      * @param  string $msg
      * @return void
      */
-    protected function _displayExceptionMsg($msg)
+    protected function _displayConsoleMsg($msg)
     {
+        if ($msg instanceof \Magento\Framework\Phrase) {
+            $msg = $msg->render();
+        }
         $this->_output->writeln('');
         $this->_output->writeln($msg);
         $this->_step = 0;
     }
 
     /**
-     * Regenerate category and category products Url Rewrites
+     * Process category URL rewrites re-generation
      * @param  \Magento\Catalog\Api\Data\CategoryInterface|\Magento\Framework\Model\AbstractModel $category
+     * @param  integer $storeId
      * @return void
      */
-    protected function _regenerateCategoryUrlRewrites($category)
+    protected function _categoryProcess($category, $storeId = 0)
     {
         try {
-            $categoryUrlRewriteResult = $this->getCategoryUrlRewriteGenerator()->generate($category);
+            if ($this->_commandOptions['saveOldUrls']) {
+                $category->setData('save_rewrites_history', true);
+            }
+            $category->setData('url_path', null)->setData('url_key', null)->setStoreId($storeId)->save();
+
+            $this->_resetCategoryProductsUrlKeyPath($category, $storeId);
+
+            $this->_regenerateCategoryUrlRewrites($category, $storeId);
+
+            //frees memory for maps that are self-initialized in multiple classes that were called by the generators
+            $this->_resetUrlRewritesDataMaps($category);
+
+            $this->_displayProgressDots();
+        } catch (\Exception $e) {
+            // debugging
+            $this->_displayConsoleMsg('Exception: '. $e->getMessage() .' Category ID: '. $category->getId());
+        }
+    }
+
+    /**
+     * Regenerate category and category products Url Rewrites
+     * @param  \Magento\Catalog\Api\Data\CategoryInterface|\Magento\Framework\Model\AbstractModel $category
+     * @param  integer $storeId
+     * @return void
+     */
+    protected function _regenerateCategoryUrlRewrites($category, $storeId)
+    {
+        try {
+            $categoryUrlRewriteResult = $this->_getCategoryUrlRewriteGenerator()->generate($category);
             $this->_doBunchReplaceUrlRewrites($categoryUrlRewriteResult);
 
-            $productUrlRewriteResult = $this->getUrlRewriteHandler()->generateProductUrlRewrites($category);
+            $productUrlRewriteResult = $this->_getUrlRewriteHandler()->generateProductUrlRewrites($category);
             $this->_doBunchReplaceUrlRewrites($productUrlRewriteResult, 'Product');
         } catch (\Exception $e) {
             // debugging
-            $this->_displayExceptionMsg('Exception: '. $e->getMessage() .' Category ID: '. $category->getId());
+            $this->_displayConsoleMsg('Exception: '. $e->getMessage() .' Category ID: '. $category->getId());
         }
     }
 
@@ -474,13 +613,17 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      */
     protected function _doBunchReplaceUrlRewrites($urlRewrites = array(), $type = 'Category')
     {
-        foreach ($urlRewrites as $singleUrlRewrite) {
-            try {
-                $this->_urlRewriteBunchReplacer->doBunchReplace(array($singleUrlRewrite));
-            } catch (\Exception $y) {
-                // debugging
-                $data = $singleUrlRewrite->toArray();
-                $this->_displayExceptionMsg($y->getMessage() .' '. $type .' ID: '. $data['entity_id'] .'. Request path: '. $data['request_path']);
+        try {
+            $this->_urlRewriteBunchReplacer->doBunchReplace($urlRewrites);
+        } catch (\Magento\UrlRewrite\Model\Exception\UrlAlreadyExistsException $e) {
+            foreach ($urlRewrites as $singleUrlRewrite) {
+                try {
+                    $this->_urlRewriteBunchReplacer->doBunchReplace(array($singleUrlRewrite));
+                } catch (\Exception $y) {
+                    // debugging
+                    $data = $singleUrlRewrite->toArray();
+                    $this->_displayConsoleMsg($y->getMessage() .' '. $type .' ID: '. $data['entity_id'] .'. Request path: '. $data['request_path']);
+                }
             }
         }
     }
