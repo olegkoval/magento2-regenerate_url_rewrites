@@ -3,10 +3,10 @@
 Magento 2 "Regenerate Url rewrites" extension add a CLI feature which allow to regenerate a Url rewrites of products/categories in all stores or specific store.
 Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrites
 
-## DONATIONS / SUPPORTING ME
-You can support me here:
-* https://www.patreon.com/olegkoval
-* https://www.liqpay.ua/en/checkout/card/380983346262
+## DONATIONS / SUPPORT ME ON:
+* [Patreon](https://www.patreon.com/olegkoval)
+* [Fondy](https://api.fondy.eu/s/ghYyR)
+* [Liqpay](https://www.liqpay.ua/en/checkout/card/380983346262)
 
 ## INSTALLATION
 
@@ -20,7 +20,7 @@ You can support me here:
 * deploy files into Magento2 folder `app/code/OlegKoval/RegenerateUrlRewrites`
 
 ### ENABLE EXTENSION
-* enable extension (use Magento 2 command line interface *):
+* enable extension (use Magento 2 command line interface \*):
 >`$> bin/magento module:enable OlegKoval_RegenerateUrlRewrites`
 
 * to make sure that the enabled module is properly registered, run 'setup:upgrade':
@@ -42,8 +42,20 @@ or
 * to save a current URL rewrites (e.g.: you've updated a name of product(s)/category(-ies) and want to get a new URL rewites and save current):
 >`$> bin/magento ok:urlrewrites:regenerate --save-old-urls`
 
-* to do not run full reindex at the end of Url rewrites generation:
+* do not run full reindex at the end of Url rewrites generation:
 >`$> bin/magento ok:urlrewrites:regenerate --no-reindex`
+
+* do not run cache:clean at the end of Url rewrites generation:
+>`$> bin/magento ok:urlrewrites:regenerate --no-cache-clean`
+
+* do not run cache:flush at the end of Url rewrites generation:
+>`$> bin/magento ok:urlrewrites:regenerate --no-cache-flush`
+
+* do not clean current products url_key values (take into account that new URL's will be generated based on the current url_key values, not products "name" values, \*\* see bottom):
+>`$> bin/magento ok:urlrewrites:regenerate --no-clean-url-key`
+
+* do not display a progress dots in the console (usefull for a stores with a big number of products):
+>`$> bin/magento ok:urlrewrites:regenerate --no-progress`
 
 * also you can combine a options:
 >`$> bin/magento ok:urlrewrites:regenerate 2 --save-old-urls`
@@ -67,3 +79,5 @@ Oleg Koval
 
 -------------
 \* see: http://devdocs.magento.com/guides/v2.0/config-guide/cli/config-cli-subcommands.html
+
+\*\* when Magento generate URL rewrites for some product it check if product have a url_key value and use it (and do not take into acount "name" value, even if you modified it), otherwise (if url_key not exists or have an empty value) Magento use a product name to generate new url_key and then use it to generate a URL rewrites.

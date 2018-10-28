@@ -103,11 +103,18 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
             $this->_output->writeln(' Done');
         }
 
-        $this->_output->write('Cache refreshing...');
-        shell_exec('php bin/magento cache:clean');
-        shell_exec('php bin/magento cache:flush');
-        $this->_output->writeln(' Done');
-        $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh this external cache.');
+        if ($this->_commandOptions['runCacheClean'] || $this->_commandOptions['runCacheFlush']) {
+            $this->_output->writeln('Cache refreshing...');
+            if ($this->_commandOptions['runCacheClean']) {
+                shell_exec('php bin/magento cache:clean');
+            }
+            if ($this->_commandOptions['runCacheFlush']) {
+                shell_exec('php bin/magento cache:flush');
+            }
+            $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh this external cache.');
+        }
+
+        $this->_showSupportMe();
         $this->_output->writeln('Finished');
     }
 
@@ -143,10 +150,15 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
         $options = $this->_input->getOptions();
         $allStores = $this->_getAllStoreIds();
 
+        // default values
         $this->_commandOptions['saveOldUrls'] = false;
         $this->_commandOptions['runReindex'] = true;
         $this->_commandOptions['protectOutOfMemory'] = false;
         $this->_commandOptions['storesList'] = [];
+        $this->_commandOptions['showProgress'] = true;
+        $this->_commandOptions['runCacheClean'] = true;
+        $this->_commandOptions['runCacheFlush'] = true;
+        $this->_commandOptions['cleanUrlKey'] = true;
         $this->_commandOptions['categoriesFilter'] = [];
         $this->_commandOptions['productsFilter'] = [];
         $this->_commandOptions['categoryId'] = null;
@@ -159,6 +171,22 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
 
         if (isset($options[self::INPUT_KEY_NO_REINDEX]) && $options[self::INPUT_KEY_NO_REINDEX] === true) {
             $this->_commandOptions['runReindex'] = false;
+        }
+
+        if (isset($options[self::INPUT_KEY_NO_PROGRESS]) && $options[self::INPUT_KEY_NO_PROGRESS] === true) {
+            $this->_commandOptions['showProgress'] = false;
+        }
+
+        if (isset($options[self::INPUT_KEY_NO_CACHE_CLEAN]) && $options[self::INPUT_KEY_NO_CACHE_CLEAN] === true) {
+            $this->_commandOptions['runCacheClean'] = false;
+        }
+
+        if (isset($options[self::INPUT_KEY_NO_CACHE_FLUSH]) && $options[self::INPUT_KEY_NO_CACHE_FLUSH] === true) {
+            $this->_commandOptions['runCacheFlush'] = false;
+        }
+
+        if (isset($options[self::INPUT_KEY_NO_CLEAN_URL_KEY]) && $options[self::INPUT_KEY_NO_CLEAN_URL_KEY] === true) {
+            $this->_commandOptions['cleanUrlKey'] = false;
         }
 
         if (isset($options[self::INPUT_KEY_CATEGORIES_RANGE])) {

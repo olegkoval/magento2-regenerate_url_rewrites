@@ -36,6 +36,10 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     const INPUT_KEY_STOREID               = 'storeId';
     const INPUT_KEY_SAVE_REWRITES_HISTORY = 'save-old-urls';
     const INPUT_KEY_NO_REINDEX            = 'no-reindex';
+    const INPUT_KEY_NO_PROGRESS           = 'no-progress';
+    const INPUT_KEY_NO_CACHE_FLUSH        = 'no-cache-flush';
+    const INPUT_KEY_NO_CACHE_CLEAN        = 'no-cache-clean';
+    const INPUT_KEY_NO_CLEAN_URL_KEY      = 'no-clean-url-key';
     const INPUT_KEY_CATEGORIES_RANGE      = 'categories-range';
     const INPUT_KEY_PRODUCTS_RANGE        = 'products-range';
     const INPUT_KEY_CATEGORY_ID           = 'category-id';
@@ -227,6 +231,30 @@ abstract class RegenerateUrlRewritesAbstract extends Command
                     'Do not run reindex when URL rewrites are generated.'
                 ),
                 new InputOption(
+                    self::INPUT_KEY_NO_PROGRESS,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not show progress indicator.'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_CACHE_FLUSH,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not run cache:flush when URL rewrites are generated.'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_CACHE_CLEAN,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not run cache:clean when URL rewrites are generated.'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_CLEAN_URL_KEY,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not clean current products url_key values.'
+                ),
+                new InputOption(
                     self::INPUT_KEY_CATEGORIES_RANGE,
                     null,
                     InputArgument::OPTIONAL,
@@ -245,7 +273,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
                     'Specific category ID, e.g.: 123'
                 ),
                 new InputOption(
-                    self::INPUT_KEY_CATEGORY_ID,
+                    self::INPUT_KEY_PRODUCT_ID,
                     null,
                     InputArgument::OPTIONAL,
                     'Specific product ID, e.g.: 107'
@@ -318,9 +346,9 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     {
         $this->_output->writeln('');
         $this->_output->writeln('----------------------------------------------------');
-        $this->_output->writeln('You can support me here:');
+        $this->_output->writeln('Please, support me on:');
         $this->_output->writeln('https://www.patreon.com/olegkoval');
-        $this->_output->writeln('https://www.liqpay.ua/en/checkout/card/380983346262');
+        $this->_output->writeln('https://api.fondy.eu/s/ghYyR');
         $this->_output->writeln('----------------------------------------------------');
         $this->_output->writeln('');
     }
@@ -504,6 +532,9 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      */
     protected function _resetCategoryProductsUrlKeyPath($category, $storeId)
     {
+        if (!$this->_commandOptions['cleanUrlKey']) {
+            return;
+        }
         $productCollection = $this->_productCollectionFactory->create();
         $productCollection->setStoreId($storeId);
         $productCollection->addAttributeToSelect('entity_id');
@@ -533,6 +564,9 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      */
     protected function _displayProgressDots()
     {
+        if (!$this->_commandOptions['showProgress']) {
+            return;
+        }
         $this->_step++;
         $this->_output->write('.');
 
