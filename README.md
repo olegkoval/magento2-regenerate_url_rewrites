@@ -53,7 +53,7 @@ or
 * do not clean current products url_key values (take into account that new URL's will be generated based on the current url_key values, not products "name" values) \*\*:
 >`$> bin/magento ok:urlrewrites:regenerate --no-clean-url-key`
 
-\*\* When Magento generate URL rewrites for some product it check if product have a url_key value and use it (and do not take into acount "name" value, even if you modified it), otherwise (if url_key not exists or have an empty value) Magento use a product name to generate new url_key and then use it to generate a URL rewrites.
+\*\* When Magento generate URL rewrites for some product it check if product have a url_key value and use it (and do not take into account "name" value, even if you modified it), otherwise (if url_key not exists or have an empty value) Magento use a product name to generate new url_key and then use it to generate a URL rewrites.
 
 * do not display a progress dots in the console (usefull for a stores with a big number of products):
 >`$> bin/magento ok:urlrewrites:regenerate --no-progress`
