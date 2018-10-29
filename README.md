@@ -6,7 +6,6 @@ Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrite
 ## DONATIONS / SUPPORT ME ON:
 * [Patreon](https://www.patreon.com/olegkoval)
 * [Fondy](https://api.fondy.eu/s/ghYyR)
-* [Liqpay](https://www.liqpay.ua/en/checkout/card/380983346262)
 
 ## INSTALLATION
 
@@ -51,8 +50,10 @@ or
 * do not run cache:flush at the end of Url rewrites generation:
 >`$> bin/magento ok:urlrewrites:regenerate --no-cache-flush`
 
-* do not clean current products url_key values (take into account that new URL's will be generated based on the current url_key values, not products "name" values, \*\* see bottom):
+* do not clean current products url_key values (take into account that new URL's will be generated based on the current url_key values, not products "name" values) \*\*:
 >`$> bin/magento ok:urlrewrites:regenerate --no-clean-url-key`
+
+\*\* When Magento generate URL rewrites for some product it check if product have a url_key value and use it (and do not take into acount "name" value, even if you modified it), otherwise (if url_key not exists or have an empty value) Magento use a product name to generate new url_key and then use it to generate a URL rewrites.
 
 * do not display a progress dots in the console (usefull for a stores with a big number of products):
 >`$> bin/magento ok:urlrewrites:regenerate --no-progress`
@@ -79,5 +80,3 @@ Oleg Koval
 
 -------------
 \* see: http://devdocs.magento.com/guides/v2.0/config-guide/cli/config-cli-subcommands.html
-
-\*\* when Magento generate URL rewrites for some product it check if product have a url_key value and use it (and do not take into acount "name" value, even if you modified it), otherwise (if url_key not exists or have an empty value) Magento use a product name to generate new url_key and then use it to generate a URL rewrites.

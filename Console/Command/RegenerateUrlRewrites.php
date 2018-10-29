@@ -104,13 +104,14 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
         }
 
         if ($this->_commandOptions['runCacheClean'] || $this->_commandOptions['runCacheFlush']) {
-            $this->_output->writeln('Cache refreshing...');
+            $this->_output->write('Cache refreshing...');
             if ($this->_commandOptions['runCacheClean']) {
                 shell_exec('php bin/magento cache:clean');
             }
             if ($this->_commandOptions['runCacheFlush']) {
                 shell_exec('php bin/magento cache:flush');
             }
+            $this->_output->writeln(' Done');
             $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh this external cache.');
         }
 

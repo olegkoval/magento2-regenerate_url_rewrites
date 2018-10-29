@@ -440,6 +440,24 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     }
 
     /**
+     * Get root category Id of specific store
+     * @param  string $storeId
+     * @return integer
+     */
+    protected function _getStoreRootCategoryId($storeId)
+    {
+        $result = 0;
+
+        // get existed Id's from this range in entity DB table
+        $tableName = $this->_resource->getTableName('store_group');
+        $sql = "SELECT root_category_id FROM {$tableName} WHERE default_store_id = {$storeId};";
+
+        $result = (int) $this->_resource->getConnection()->fetchOne($sql);
+
+        return $result;
+    }
+
+    /**
      * @return Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator
      */
     protected function _getCategoryUrlRewriteGenerator()
@@ -511,11 +529,16 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         // get categories collection
         $categoriesCollection = $this->_categoryCollectionFactory->create()
             ->addAttributeToSelect('*')
-            ->setStore($storeId)
             ->addFieldToFilter('level', array('gt' => '1'))
             ->setOrder('level', 'DESC')
             // use limit to avoid a "eating" of a memory
             ->setPageSize($this->_collectionPageSize);
+
+        $rootCategoryId = $this->_getStoreRootCategoryId($storeId);
+        if ($rootCategoryId > 0) {
+            // we use this filter instead of "->setStore()" - because "setStore()" is not working now (another Magento issue)
+            $categoriesCollection->addAttributeToFilter('path', array('like' => "1/{$rootCategoryId}/%"));
+        }
 
         if (count($categoriesFilter) > 0) {
             $categoriesCollection->addAttributeToFilter('entity_id', array('in' => $categoriesFilter));
@@ -628,7 +651,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected function _regenerateCategoryUrlRewrites($category, $storeId)
     {
         try {
-            $categoryUrlRewriteResult = $this->_getCategoryUrlRewriteGenerator()->generate($category);
+            $categoryUrlRewriteResult = $this->_getCategoryUrlRewriteGenerator()->generate($category, true);
             $this->_doBunchReplaceUrlRewrites($categoryUrlRewriteResult);
 
             $productUrlRewriteResult = $this->_getUrlRewriteHandler()->generateProductUrlRewrites($category);

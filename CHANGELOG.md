@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.3.0] - 2018-10-09
+## [1.3.0] - 2018-10-29
 ### Added
 - new option "--no-cache-clean"
 - new option "--no-cache-flush"
@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Changed
 - optimized code
 - modified logic of url rewrites regeneration
+- fixed issue of store filter in categories collection
 
 ## [1.2.3] - 2018-10-03
 ### Added
