@@ -30,6 +30,7 @@ use Magento\CatalogUrlRewrite\Model\Map\DataCategoryUrlRewriteDatabaseMap;
 use Magento\CatalogUrlRewrite\Model\Map\DataProductUrlRewriteDatabaseMap;
 use Magento\Catalog\Model\ResourceModel\Product\ActionFactory as ProductActionFactory;
 use Magento\Framework\App\State as AppState;
+use Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator;
 
 abstract class RegenerateUrlRewritesAbstract extends Command
 {
@@ -132,6 +133,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_appState;
 
     /**
+     * @var Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator
+     */
+    protected $_categoryUrlPathGenerator;
+
+    /**
      * @var integer
      */
     protected $_step = 0;
@@ -178,7 +184,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory,
         DatabaseMapPool\Proxy $databaseMapPool,
         ProductActionFactory\Proxy $productActionFactory,
-        AppState\Proxy $appState
+        AppState\Proxy $appState,
+        CategoryUrlPathGenerator $categoryUrlPathGenerator
     ) {
         $this->_resource = $resource;
         $this->_categoryCollectionFactory = $categoryCollectionFactory;
@@ -196,6 +203,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
             DataProductUrlRewriteDatabaseMap::class
         ];
         $this->_appState = $appState;
+        $this->_categoryUrlPathGenerator = $categoryUrlPathGenerator;
         parent::__construct();
     }
 
@@ -626,7 +634,9 @@ abstract class RegenerateUrlRewritesAbstract extends Command
             if ($this->_commandOptions['saveOldUrls']) {
                 $category->setData('save_rewrites_history', true);
             }
-            $category->setData('url_path', null)->setData('url_key', null)->setStoreId($storeId)->save();
+            $category->setStoreId($storeId);
+            $category->setUrlPath($this->_categoryUrlPathGenerator->getUrlPath($category));
+            $category->getResource()->saveAttribute($category, 'url_path');
 
             $this->_resetCategoryProductsUrlKeyPath($category, $storeId);
 
