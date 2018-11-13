@@ -456,9 +456,10 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     {
         $result = 0;
 
-        // get existed Id's from this range in entity DB table
-        $tableName = $this->_resource->getTableName('store_group');
-        $sql = "SELECT root_category_id FROM {$tableName} WHERE default_store_id = {$storeId};";
+        // use SQL to speed up and to not instantiate additional store object just for root category ID
+        $tableName1 = $this->_resource->getTableName('store_group');
+        $tableName2 = $this->_resource->getTableName('store');
+        $sql = "SELECT t1.root_category_id FROM {$tableName1} t1 INNER JOIN {$tableName2} t2 ON t2.website_id = t1.website_id WHERE t2.store_id = {$storeId};";
 
         $result = (int) $this->_resource->getConnection()->fetchOne($sql);
 
@@ -569,6 +570,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $productCollection = $this->_productCollectionFactory->create();
         $productCollection->setStoreId($storeId);
         $productCollection->addAttributeToSelect('entity_id');
+        $productCollection->addAttributeToSelect('name');
         $productCollection->addCategoriesFilter(['eq' => [$category->getEntityId()]]);
         $productCollection->setPageSize($this->_collectionPageSize);
 
@@ -578,11 +580,13 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         while ($currentPage <= $pageCount) {
             $productCollection->setCurPage($currentPage);
             
-            $this->_getProductAction()->updateAttributes(
-                $productCollection->getAllIds(),
-                ['url_path' => null, 'url_key' => null],
-                $storeId
-            );
+            foreach ($productCollection as $product) {
+                $this->_getProductAction()->updateAttributes(
+                    [$product->getId()],
+                    ['url_path' => null, 'url_key' => $product->formatUrlKey($product->getName())],
+                    $storeId
+                );
+            }
 
             $productCollection->clear();
             $currentPage++;
@@ -637,6 +641,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
             $category->setStoreId($storeId);
             $category->setUrlPath($this->_categoryUrlPathGenerator->getUrlPath($category));
             $category->getResource()->saveAttribute($category, 'url_path');
+            $category->setUrlKey($category->formatUrlKey($category->getName()));
+            $category->getResource()->saveAttribute($category, 'url_key');
 
             $this->_resetCategoryProductsUrlKeyPath($category, $storeId);
 
@@ -661,10 +667,18 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected function _regenerateCategoryUrlRewrites($category, $storeId)
     {
         try {
+            $category->setStore($storeId);
+            $category->setChangedProductIds(true);
             $categoryUrlRewriteResult = $this->_getCategoryUrlRewriteGenerator()->generate($category, true);
             $this->_doBunchReplaceUrlRewrites($categoryUrlRewriteResult);
 
             $productUrlRewriteResult = $this->_getUrlRewriteHandler()->generateProductUrlRewrites($category);
+
+            // fix for double slashes issue
+            foreach ($productUrlRewriteResult as &$urlRewrite) {
+                $urlRewrite->setRequestPath(trim($urlRewrite->getRequestPath(), '/'));
+            }
+
             $this->_doBunchReplaceUrlRewrites($productUrlRewriteResult, 'Product');
         } catch (\Exception $e) {
             // debugging

@@ -65,6 +65,11 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
             $this->_appState->setAreaCode('adminhtml');
         }
 
+        // remove current url rewrites
+        if (count($this->_commandOptions['storesList']) > 0 && !$this->_commandOptions['saveOldUrls']) {
+            $this->_removeAllUrlRewrites($this->_commandOptions['storesList'], $this->_commandOptions['productsFilter']);
+        }
+
         foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
             $this->_output->writeln('');
             $this->_output->writeln("[Store ID: {$storeId}, Store View code: {$storeCode}]:");

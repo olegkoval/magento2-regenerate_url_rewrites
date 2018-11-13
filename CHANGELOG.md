@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.3.1] - 2018-11-14
+### Changed
+- fixed issue of empty product URL keys
+- fixed double slashes issue
+- update category attributes via resource saveAttribute()
+
 ## [1.3.0] - 2018-10-29
 ### Added
 - new option "--no-cache-clean"
