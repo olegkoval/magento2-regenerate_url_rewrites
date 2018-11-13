@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - fixed issue of empty product URL keys
 - fixed double slashes issue
 - update category attributes via resource saveAttribute()
+- use proxy for CategoryUrlPathGenerator
 
 ## [1.3.0] - 2018-10-29
 ### Added
