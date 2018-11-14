@@ -696,14 +696,19 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     {
         try {
             $this->_urlRewriteBunchReplacer->doBunchReplace($urlRewrites);
-        } catch (\Magento\UrlRewrite\Model\Exception\UrlAlreadyExistsException $e) {
-            foreach ($urlRewrites as $singleUrlRewrite) {
-                try {
-                    $this->_urlRewriteBunchReplacer->doBunchReplace(array($singleUrlRewrite));
-                } catch (\Exception $y) {
-                    // debugging
-                    $data = $singleUrlRewrite->toArray();
-                    $this->_displayConsoleMsg($y->getMessage() .' '. $type .' ID: '. $data['entity_id'] .'. Request path: '. $data['request_path']);
+        } catch (\Exception $e) {
+            if (
+                $e instanceof \Magento\UrlRewrite\Model\Exception\UrlAlreadyExistsException
+                || strpos($e->getMessage(), 'Duplicate entry') !== false
+            ) {
+                foreach ($urlRewrites as $singleUrlRewrite) {
+                    try {
+                        $this->_urlRewriteBunchReplacer->doBunchReplace(array($singleUrlRewrite));
+                    } catch (\Exception $y) {
+                        // debugging
+                        $data = $singleUrlRewrite->toArray();
+                        $this->_displayConsoleMsg($y->getMessage() .' '. $type .' ID: '. $data['entity_id'] .'. Request path: '. $data['request_path']);
+                    }
                 }
             }
         }
