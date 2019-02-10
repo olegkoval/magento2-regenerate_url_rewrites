@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.4.0] - 2019-02-11
+### Added
+- new option "--entity-type"
+- new option "--products-range"
+- new option "--product-id"
+- new option "--category-range"
+- new option "--category-id"
+
+### Changed
+- revised and restructured code
+- modified logic of url rewrites regeneration
+- removed "--clean-url-key"
+
 ## [1.3.1] - 2018-11-14
 ### Changed
 - fixed issue of empty product URL keys

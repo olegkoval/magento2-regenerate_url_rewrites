@@ -10,19 +10,13 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
 
-if (class_exists('\OlegKoval\RegenerateUrlRewrites\Console\Command\RegenerateUrlRewritesPro')) {
-    abstract class RegenerateUrlRewritesLayer extends RegenerateUrlRewritesPro {}
-} else {
-    abstract class RegenerateUrlRewritesLayer extends RegenerateUrlRewritesAbstract {}
-}
-
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
+class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
 {
     /**
      * @var null|Symfony\Component\Console\Input\InputInterface
@@ -33,6 +27,83 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
      * @var null|Symfony\Component\Console\Output\OutputInterface
      */
     protected $_output = null;
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function configure()
+    {
+        $this->setName('ok:urlrewrites:regenerate')
+            ->setDescription('Regenerate Url rewrites of products and categories')
+            ->setDefinition([
+                new InputOption(
+                    self::INPUT_KEY_STOREID,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Specific store id'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_REGENERATE_ENTITY_TYPE,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Entity type which URLs regenerate: product or category. Default is "product".'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_SAVE_REWRITES_HISTORY,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Save current URL Rewrites'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_REINDEX,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not run reindex when URL rewrites are generated.'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_PROGRESS,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not show progress indicator.'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_CACHE_FLUSH,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not run cache:flush when URL rewrites are generated.'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_CACHE_CLEAN,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not run cache:clean when URL rewrites are generated.'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_CATEGORIES_RANGE,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Categories ID range, e.g.: 15-40 (Pro version only)'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_PRODUCTS_RANGE,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Products ID range, e.g.: 101-152 (Pro version only)'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_CATEGORY_ID,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Specific category ID, e.g.: 123 (Pro version only)'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_PRODUCT_ID,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Specific product ID, e.g.: 107 (Pro version only)'
+                )
+            ]);
+    }
 
     /**
      * Regenerate Url Rewrites
@@ -65,111 +136,71 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
             $this->_appState->setAreaCode('adminhtml');
         }
 
-        // remove current url rewrites
-        if (count($this->_commandOptions['storesList']) > 0 && !$this->_commandOptions['saveOldUrls']) {
-            $this->_removeAllUrlRewrites($this->_commandOptions['storesList'], $this->_commandOptions['productsFilter']);
-        }
-
         foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
+            $this->_step = 0;
             $this->_output->writeln('');
             $this->_output->writeln("[Store ID: {$storeId}, Store View code: {$storeCode}]:");
 
-            if (count($this->_commandOptions['categoriesFilter']) > 0) {
-                $this->regenerateCategoriesRangeUrlRewrites(
-                    $this->_commandOptions['categoriesFilter'],
-                    $storeId
-                );
-            } elseif (count($this->_commandOptions['productsFilter']) > 0) {
-                $this->regenerateProductsRangeUrlRewrites(
-                    $this->_commandOptions['productsFilter'],
-                    $storeId
-                );
-            } elseif (!empty($this->_commandOptions['categoryId'])) {
-                $this->regenerateSpecificCategoryUrlRewrites(
-                    $this->_commandOptions['categoryId'],
-                    $storeId
-                );
-            } elseif (!empty($this->_commandOptions['productId'])) {
-                $this->regenerateSpecificProductUrlRewrites(
-                    $this->_commandOptions['productId'],
-                    $storeId
-                );
-            } else {
-                $this->regenerateAllUrlRewrites($storeId);
+            if ($this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT) {
+                if (count($this->_commandOptions['productsFilter']) > 0) {
+                    $this->regenerateProductsRangeUrlRewrites(
+                        $this->_commandOptions['productsFilter'],
+                        $storeId
+                    );
+                } elseif (!empty($this->_commandOptions['productId'])) {
+                    $this->regenerateSpecificProductUrlRewrites(
+                        $this->_commandOptions['productId'],
+                        $storeId
+                    );
+                } else {
+                    $this->regenerateAllProductsUrlRewrites($storeId);
+                }
+            } elseif ($this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY) {
+                if (count($this->_commandOptions['categoriesFilter']) > 0) {
+                    $this->regenerateCategoriesRangeUrlRewrites(
+                        $this->_commandOptions['categoriesFilter'],
+                        $storeId
+                    );
+                } elseif (!empty($this->_commandOptions['categoryId'])) {
+                    $this->regenerateSpecificCategoryUrlRewrites(
+                        $this->_commandOptions['categoryId'],
+                        $storeId
+                    );
+                } else {
+                    $this->regenerateAllCategoriesUrlRewrites($storeId);
+                }
             }
         }
 
         $this->_output->writeln('');
         $this->_output->writeln('');
 
-        if ($this->_commandOptions['runReindex'] == true) {
-            $this->_output->write('Reindexation...');
-            shell_exec('php bin/magento indexer:reindex');
-            $this->_output->writeln(' Done');
-        }
-
-        if ($this->_commandOptions['runCacheClean'] || $this->_commandOptions['runCacheFlush']) {
-            $this->_output->write('Cache refreshing...');
-            if ($this->_commandOptions['runCacheClean']) {
-                shell_exec('php bin/magento cache:clean');
-            }
-            if ($this->_commandOptions['runCacheFlush']) {
-                shell_exec('php bin/magento cache:flush');
-            }
-            $this->_output->writeln(' Done');
-            $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh this external cache.');
-        }
+        $this->_runReindexation();
+        $this->_runClearCache();
 
         $this->_showSupportMe();
         $this->_output->writeln('Finished');
     }
 
     /**
-     * @see parent::regenerateAllUrlRewrites()
-     */
-    public function regenerateAllUrlRewrites($storeId = 0)
-    {
-        $this->_step = 0;
-
-        // get categories collection
-        $categories = $this->_getCategoriesCollection($storeId);
-
-        $pageCount = $categories->getLastPageNumber();
-        $currentPage = 1;
-        while ($currentPage <= $pageCount) {
-            $categories->setCurPage($currentPage);
-
-            foreach ($categories as $category) {
-                $this->_categoryProcess($category, $storeId);
-            }
-
-            $categories->clear();
-            $currentPage++;
-        }
-    }
-
-    /**
-     * @see parent::getCommandOptions()
+     * Get command options
+     * @return void
      */
     public function getCommandOptions()
     {
         $options = $this->_input->getOptions();
         $allStores = $this->_getAllStoreIds();
-
-        // default values
-        $this->_commandOptions['saveOldUrls'] = false;
-        $this->_commandOptions['runReindex'] = true;
-        $this->_commandOptions['protectOutOfMemory'] = false;
-        $this->_commandOptions['storesList'] = [];
-        $this->_commandOptions['showProgress'] = true;
-        $this->_commandOptions['runCacheClean'] = true;
-        $this->_commandOptions['runCacheFlush'] = true;
-        $this->_commandOptions['cleanUrlKey'] = true;
-        $this->_commandOptions['categoriesFilter'] = [];
-        $this->_commandOptions['productsFilter'] = [];
-        $this->_commandOptions['categoryId'] = null;
-        $this->_commandOptions['productId'] = null;
         $distinctOptionsUsed = 0;
+
+        if (
+            isset($options[self::INPUT_KEY_REGENERATE_ENTITY_TYPE])
+            && in_array(
+                $options[self::INPUT_KEY_REGENERATE_ENTITY_TYPE],
+                array(self::INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT, self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY)
+            )
+        ) {
+            $this->_commandOptions['entityType'] = $options[self::INPUT_KEY_REGENERATE_ENTITY_TYPE];
+        }
 
         if (isset($options[self::INPUT_KEY_SAVE_REWRITES_HISTORY]) && $options[self::INPUT_KEY_SAVE_REWRITES_HISTORY] === true) {
             $this->_commandOptions['saveOldUrls'] = true;
@@ -191,22 +222,28 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
             $this->_commandOptions['runCacheFlush'] = false;
         }
 
-        if (isset($options[self::INPUT_KEY_NO_CLEAN_URL_KEY]) && $options[self::INPUT_KEY_NO_CLEAN_URL_KEY] === true) {
-            $this->_commandOptions['cleanUrlKey'] = false;
+        if (isset($options[self::INPUT_KEY_PRODUCTS_RANGE])) {
+            $this->_commandOptions['productsFilter'] = $this->_generateIdsRangeArray(
+                $options[self::INPUT_KEY_PRODUCTS_RANGE],
+                'product'
+            );
+            $distinctOptionsUsed++;
+        }
+
+        if (isset($options[self::INPUT_KEY_PRODUCT_ID])) {
+            $this->_commandOptions['productId'] = (int)$options[self::INPUT_KEY_PRODUCT_ID];
+
+            if ($this->_commandOptions['productId'] == 0) {
+                $this->_errors[] = __('ERROR: product ID should be greater than 0.');
+            } else {
+                $distinctOptionsUsed++;
+            }
         }
 
         if (isset($options[self::INPUT_KEY_CATEGORIES_RANGE])) {
             $this->_commandOptions['categoriesFilter'] = $this->_generateIdsRangeArray(
                 $options[self::INPUT_KEY_CATEGORIES_RANGE],
                 'category'
-            );
-            $distinctOptionsUsed++;
-        }
-
-        if (isset($options[self::INPUT_KEY_PRODUCTS_RANGE])) {
-            $this->_commandOptions['productsFilter'] = $this->_generateIdsRangeArray(
-                $options[self::INPUT_KEY_PRODUCTS_RANGE],
-                'product'
             );
             $distinctOptionsUsed++;
         }
@@ -221,14 +258,32 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
             }
         }
 
-        if (isset($options[self::INPUT_KEY_PRODUCT_ID])) {
-            $this->_commandOptions['productId'] = (int)$options[self::INPUT_KEY_PRODUCT_ID];
+        if (
+            $this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT
+            && (
+                count($this->_commandOptions['categoriesFilter']) > 0
+                || (int) $this->_commandOptions['categoryId'] > 0
+            )
+        ) {
+            $this->_errors[] = $this->_getLogicalConflictError(
+                self::INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT,
+                self::INPUT_KEY_CATEGORIES_RANGE,
+                self::INPUT_KEY_CATEGORY_ID
+            );
+        }
 
-            if ($this->_commandOptions['productId'] == 0) {
-                $this->_errors[] = __('ERROR: product ID should be greater than 0.');
-            } else {
-                $distinctOptionsUsed++;
-            }
+        if (
+            $this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY
+            && (
+                count($this->_commandOptions['productsFilter']) > 0
+                || (int) $this->_commandOptions['productId'] > 0
+            )
+        ) {
+            $this->_errors[] = $this->_getLogicalConflictError(
+                self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY,
+                self::INPUT_KEY_PRODUCTS_RANGE,
+                self::INPUT_KEY_PRODUCT_ID
+            );
         }
 
         if ($distinctOptionsUsed > 1) {
@@ -244,10 +299,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
         }
 
         // get store Id (if was set)
-        $storeId = $this->_input->getArgument(self::INPUT_KEY_STOREID);
-        if (is_null($storeId)) {
-            $storeId = $this->_input->getOption(self::INPUT_KEY_STOREID);
-        }
+        $storeId = $this->_input->getOption(self::INPUT_KEY_STOREID);
 
         // if store ID is not specified the re-generate for all stores
         if (is_null($storeId)) {
@@ -267,5 +319,24 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesLayer
         else {
             $this->_errors[] = __('ERROR: store ID should have a integer value.');
         }
+    }
+
+    /**
+     * Generate logical conflict error
+     * @param  string $option1
+     * @param  string $option2
+     * @param  string $option3
+     * @return string
+     */
+    private function _getLogicalConflictError($option1, $option2, $option3)
+    {
+        return __(
+                "ERROR: you can not use this options together (logical conflict):\n'--%o1' with '--%o2'/'--%o3'",
+                [
+                    'o1' => $option1,
+                    'o2' => $option2,
+                    'o4' => $option3
+                ]
+            );
     }
 }
