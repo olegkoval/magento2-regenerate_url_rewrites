@@ -24,7 +24,11 @@ abstract class RegenerateUrlRewritesProductAbstract extends RegenerateUrlRewrite
     {
         //get products collection
         $products = $this->_getProductsCollection($storeId, $productsFilter);
+
         $pageCount = $products->getLastPageNumber();
+        $this->_progress = 0;
+        $this->_total = (int)$products->getSize();
+        $this->_displayProgressBar();
         $currentPage = 1;
 
         while ($currentPage <= $pageCount) {
@@ -75,28 +79,41 @@ abstract class RegenerateUrlRewritesProductAbstract extends RegenerateUrlRewrite
             $product->setData('url_path', null)->setData('url_key', $product->formatUrlKey($product->getName()))->setStoreId($storeId);
             $productUrlRewriteResult = $this->_getProductUrlRewriteGenerator()->generate($product);
 
-            // fix for double slashes issue
-            foreach ($productUrlRewriteResult as &$urlRewrite) {
-                $urlRewrite->setRequestPath($this->_clearRequestPath($urlRewrite->getRequestPath()));
-            }
+            $productUrlRewriteResult = $this->_sanitizeProductUrlRewrites($productUrlRewriteResult);
 
             try {
                 $this->_urlPersist->replace($productUrlRewriteResult);
             } catch (\Exception $y) {
                 //to debugg error
-                foreach ($productUrlRewriteResult as $singleProductUrlRewrite) {
-                    try {
-                        $this->_urlPersist->replace(array($singleProductUrlRewrite));
-                    } catch (\Exception $y) {
-                        $data = $singleProductUrlRewrite->toArray();
-                        $this->_displayConsoleMsg($y->getMessage() .' Product ID: '. $data['entity_id'] .'. Request path: '. $data['request_path']);
-                    }
-                }
+                $this->_displayConsoleMsg($y->getMessage() .' Product ID: '. $product->getId());
             }
-            $this->_displayProgressDots();
+
+            $this->_progress++;
+            $this->_displayProgressBar();
         } catch (\Exception $e) {
             $this->_displayConsoleMsg($e->getMessage() . ' Product ID: '. $product->getId());
         }
+    }
+
+    /**
+     * Sanitize product URL rewrites
+     * @param  array $productUrlRewrites
+     * @return array
+     */
+    protected function _sanitizeProductUrlRewrites($productUrlRewrites)
+    {
+        $paths = [];
+        foreach ($productUrlRewrites as $key => $urlRewrite) {
+            $path = $this->_clearRequestPath($urlRewrite->getRequestPath());
+            if (!in_array($path, $paths)) {
+                $productUrlRewrites[$key]->setRequestPath($path);
+                $paths[] = $path;
+            } else {
+                unset($productUrlRewrites[$key]);
+            }
+        }
+
+        return $productUrlRewrites;
     }
 
     /**

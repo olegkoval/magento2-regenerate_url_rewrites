@@ -137,7 +137,6 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
         }
 
         foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
-            $this->_step = 0;
             $this->_output->writeln('');
             $this->_output->writeln("[Store ID: {$storeId}, Store View code: {$storeCode}]:");
 

@@ -148,7 +148,12 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     /**
      * @var integer
      */
-    protected $_step = 0;
+    protected $_progress = 0;
+
+    /**
+     * @var integer
+     */
+    protected $_total = 0;
 
     /**
      * @var array
@@ -393,20 +398,45 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     }
 
     /**
-     * Display progress dots in console
+     * Show a progress bar in the console
+     *
+     * @param  int $size optional size of the progress bar
      * @return void
+     *
      */
-    protected function _displayProgressDots()
+    protected function _displayProgressBar($size = 70)
     {
         if (!$this->_commandOptions['showProgress']) {
             return;
         }
-        $this->_step++;
-        $this->_output->write('.');
 
-        if ($this->_step > self::CONSOLE_LOG_MAX_DOTS_IN_LINE) {
-            $this->_output->writeln('');
-            $this->_step = 0;
+        // if we go over our bound, just ignore it
+        if ($this->_progress > $this->_total) {
+            return;
+        }
+
+        $perc = (double)($this->_progress / $this->_total);
+        $bar = floor($perc * $size);
+
+        $status_bar = "\r[";
+        $status_bar .= str_repeat('=', $bar);
+        if ($bar < $size) {
+            $status_bar .= '>';
+            $status_bar .= str_repeat(' ', $size - $bar);
+        } else {
+            $status_bar .= '=';
+        }
+
+        $disp = number_format($perc * 100, 0);
+
+        $status_bar .= "] {$disp}%  {$this->_progress}/{$this->_total}";
+
+        echo $status_bar;
+        flush();
+
+        // when done, send a newline
+        if ($this->_progress == $this->_total) {
+            echo "\r\n";
         }
     }
 
@@ -422,7 +452,6 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         }
         $this->_output->writeln('');
         $this->_output->writeln($msg);
-        $this->_step = 0;
     }
 
     /**

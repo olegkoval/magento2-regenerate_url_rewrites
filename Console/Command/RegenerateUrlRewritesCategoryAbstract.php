@@ -26,7 +26,11 @@ abstract class RegenerateUrlRewritesCategoryAbstract extends RegenerateUrlRewrit
         $categories = $this->_getCategoriesCollection($storeId, $categoriesFilter);
 
         $pageCount = $categories->getLastPageNumber();
+        $this->_progress = 0;
+        $this->_total = (int)$categories->getSize();
+        $this->_displayProgressBar();
         $currentPage = 1;
+
         while ($currentPage <= $pageCount) {
             $categories->setCurPage($currentPage);
 
@@ -78,7 +82,8 @@ abstract class RegenerateUrlRewritesCategoryAbstract extends RegenerateUrlRewrit
             //frees memory for maps that are self-initialized in multiple classes that were called by the generators
             $this->_resetUrlRewritesDataMaps($category);
 
-            $this->_displayProgressDots();
+            $this->_progress++;
+            $this->_displayProgressBar();
         } catch (\Exception $e) {
             // debugging
             $this->_displayConsoleMsg('Exception: '. $e->getMessage() .' Category ID: '. $category->getId());
