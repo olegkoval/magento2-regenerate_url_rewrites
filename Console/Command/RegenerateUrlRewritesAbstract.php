@@ -34,7 +34,7 @@ use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
 
 abstract class RegenerateUrlRewritesAbstract extends Command
 {
-    const INPUT_KEY_STOREID                         = 'storeId';
+    const INPUT_KEY_STOREID                         = 'store-id';
     const INPUT_KEY_REGENERATE_ENTITY_TYPE          = 'entity-type';
     const INPUT_KEY_SAVE_REWRITES_HISTORY           = 'save-old-urls';
     const INPUT_KEY_NO_REINDEX                      = 'no-reindex';
