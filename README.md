@@ -60,8 +60,8 @@ or
 * to regenerate URL rewrites of specific category use option `category-id` (e.g.: category ID is "15"):
 >`$> bin/magento ok:urlrewrites:regenerate --entity-type=category --category-id=15`
 
-* to regenerate URL rewrites of specific categories range use option `category-range` (e.g.: regenerate for all category with ID between "4" and "12"):
->`$> bin/magento ok:urlrewrites:regenerate --entity-type=category --category-range=4-12`
+* to regenerate URL rewrites of specific categories range use option `categories-range` (e.g.: regenerate for all categories with ID between "4" and "12"):
+>`$> bin/magento ok:urlrewrites:regenerate --entity-type=category --categories-range=4-12`
 
 \* if in the range you have a gap of ID's (in range 4-12 category with ID "6" not exists) - do not worry, script handle this.
 
@@ -84,9 +84,9 @@ or
 >`$> bin/magento ok:urlrewrites:regenerate --store-id=2 --save-old-urls --no-reindex`
 
 ### YOU CAN NOT COMBINE THIS OPTIONS TOGETHER
-* `--entity-type=product` and `--category-id`/`--category-range`
+* `--entity-type=product` and `--category-id`/`--categories-range`
 * `--entity-type=category` and `--product-id`/`--products-range`
-* `--category-id` and/or `--category-range` and/or `--product-id` and/or `--products-range`
+* `--category-id` and/or `--categories-range` and/or `--product-id` and/or `--products-range`
 
 ### EXAMPLES
 * Regenerate URL rewrites for product with ID "38" in store with ID "3":
@@ -102,7 +102,7 @@ or
 >`$> bin/magento ok:urlrewrites:regenerate --entity-type=category --category-id=22 --save-old-urls`
 
 * Regenerate URL rewrites for categories with ID's 21,22,23,24,25 in store with ID "2":
->`$> bin/magento ok:urlrewrites:regenerate --entity-type=category --category-range=21-25 --store-id=2`
+>`$> bin/magento ok:urlrewrites:regenerate --entity-type=category --categories-range=21-25 --store-id=2`
 
 ## INFO
 When you regenerate URL rewrites of some category then you regenerate URL rewrites of all products from this category AND URL rewrites of all subcategories (all levels - Magento use recursive logic) AND all products from this subcategories. This is the built-in Magento logic. So, take into account that regenerating of URL rewrites of any category (specially from top level) is a "heavy" process.
