@@ -8,6 +8,7 @@
  * @license OSL-3.0, AFL-3.0
  * new line to test pull command
  * new line to test push command
+ * new line to be pushed in another branch
  */
 \Magento\Framework\Component\ComponentRegistrar::register(
     \Magento\Framework\Component\ComponentRegistrar::MODULE,
