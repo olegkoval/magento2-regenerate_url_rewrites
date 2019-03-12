@@ -23,6 +23,7 @@ use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductColl
 use Magento\Catalog\Model\ResourceModel\Product\ActionFactory as ProductActionFactory;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGeneratorFactory;
+use Magento\CatalogUrlRewrite\Model\ProductUrlPathGenerator;
 use Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGeneratorFactory;
 use Magento\CatalogUrlRewrite\Model\UrlRewriteBunchReplacer;
 use Magento\CatalogUrlRewrite\Model\Map\DatabaseMapPool;
@@ -84,6 +85,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @var Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator
      */
     protected $_categoryUrlPathGenerator;
+
+    /**
+     * @var Magento\CatalogUrlRewrite\Model\ProductUrlPathGenerator
+     */
+    protected $_productUrlPathGenerator;
 
     /**
      * @var \Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGeneratorFactory
@@ -189,6 +195,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         ProductActionFactory\Proxy $productActionFactory,
         CategoryUrlPathGenerator\Proxy $categoryUrlPathGenerator,
         CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory,
+        ProductUrlPathGenerator\Proxy $productUrlPathGenerator,
         ProductUrlRewriteGeneratorFactory\Proxy $productUrlRewriteGeneratorFactory,
         UrlRewriteBunchReplacer\Proxy $urlRewriteBunchReplacer,
         UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory,
@@ -203,6 +210,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_productActionFactory = $productActionFactory;
         $this->_categoryUrlPathGenerator = $categoryUrlPathGenerator;
         $this->_categoryUrlRewriteGeneratorFactory = $categoryUrlRewriteGeneratorFactory;
+        $this->_productUrlPathGenerator = $productUrlPathGenerator;
         $this->_productUrlRewriteGeneratorFactory = $productUrlRewriteGeneratorFactory;
         $this->_urlRewriteBunchReplacer = $urlRewriteBunchReplacer;
         $this->_urlRewriteHandlerFactory = $urlRewriteHandlerFactory;
