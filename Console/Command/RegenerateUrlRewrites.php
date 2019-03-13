@@ -49,6 +49,12 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
                     'Entity type which URLs regenerate: product or category. Default is "product".'
                 ),
                 new InputOption(
+                    self::INPUT_KEY_REGENERATE_URL_KEYS,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Ignore existing URL_key entity field and regenerate it using default value'
+                ),                
+                new InputOption(
                     self::INPUT_KEY_SAVE_REWRITES_HISTORY,
                     null,
                     InputOption::VALUE_NONE,
@@ -199,6 +205,10 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
             )
         ) {
             $this->_commandOptions['entityType'] = $options[self::INPUT_KEY_REGENERATE_ENTITY_TYPE];
+        }
+
+        if(isset($options[self::INPUT_KEY_REGENERATE_URL_KEYS]) && $options[self::INPUT_KEY_REGENERATE_URL_KEYS] === true) {
+            $this->_commandOptions['regenUrlKeys'] = true;
         }
 
         if (isset($options[self::INPUT_KEY_SAVE_REWRITES_HISTORY]) && $options[self::INPUT_KEY_SAVE_REWRITES_HISTORY] === true) {
