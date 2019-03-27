@@ -72,16 +72,20 @@ abstract class RegenerateUrlRewritesProductAbstract extends RegenerateUrlRewrite
                 $product->setData('save_rewrites_history', true);
             }
 
+            $product->setData('url_path', null)
+                ->setData('url_key', null)
+                ->setStoreId($storeId);
+
             $generatedKey = $this->_productUrlPathGenerator->getUrlKey($product);
+
+            $product->setData('url_key', $generatedKey);
 
             $this->_getProductAction()->updateAttributes(
                 [$product->getId()],
                 ['url_path' => null, 'url_key' => $generatedKey],
                 $storeId
             );
-            $product->setData('url_path', null)
-                    ->setData('url_key', $generatedKey)
-                    ->setStoreId($storeId);
+            
             $productUrlRewriteResult = $this->_getProductUrlRewriteGenerator()->generate($product);
 
             $productUrlRewriteResult = $this->_sanitizeProductUrlRewrites($productUrlRewriteResult);
