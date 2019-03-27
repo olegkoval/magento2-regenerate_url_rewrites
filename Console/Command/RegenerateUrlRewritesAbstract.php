@@ -423,7 +423,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
             return;
         }
 
-        $perc = (double)($this->_progress / $this->_total);
+        $perc = $this->_total ? (double)($this->_progress / $this->_total) : 1;
         $bar = floor($perc * $size);
 
         $status_bar = "\r[";
