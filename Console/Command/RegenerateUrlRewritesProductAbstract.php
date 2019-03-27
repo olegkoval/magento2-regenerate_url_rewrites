@@ -132,6 +132,7 @@ abstract class RegenerateUrlRewritesProductAbstract extends RegenerateUrlRewrite
         $productsCollection = $this->_productCollectionFactory->create();
 
         $productsCollection->setStore($storeId)
+            ->addStoreFilter($storeId)
             ->addAttributeToSelect('name')
             ->addAttributeToSelect('visibility')
             ->addAttributeToSelect('url_key')
