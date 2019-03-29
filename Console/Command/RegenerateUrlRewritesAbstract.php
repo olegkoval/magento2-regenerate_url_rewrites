@@ -529,6 +529,6 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      */
     protected function _clearRequestPath($requestPath)
     {
-        return trim($requestPath, '/');
+        return ltrim($requestPath, '/');
     }
 }
