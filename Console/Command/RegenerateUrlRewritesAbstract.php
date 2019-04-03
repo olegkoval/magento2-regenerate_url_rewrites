@@ -32,6 +32,7 @@ use Magento\CatalogUrlRewrite\Model\Map\DataProductUrlRewriteDatabaseMap;
 use Magento\CatalogUrlRewrite\Observer\UrlRewriteHandlerFactory;
 use Magento\UrlRewrite\Model\UrlPersistInterface as UrlPersist;
 use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
+use Magento\Store\Model\StoreManagerInterface;
 
 abstract class RegenerateUrlRewritesAbstract extends Command
 {
@@ -82,7 +83,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_productActionFactory;
 
     /**
-     * @var Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator
+     * @var \Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator
      */
     protected $_categoryUrlPathGenerator;
 
@@ -173,18 +174,21 @@ abstract class RegenerateUrlRewritesAbstract extends Command
 
     /**
      * Constructor
-     * @param ResourceConnection                       $resource
-     * @param CategoryCollectionFactory                $categoryCollectionFactory
-     * @param ProductCollectionFactory                 $productCollectionFactory
-     * @param UrlPersist\Proxy                         $urlPersist
-     * @param CategoryHelper\Proxy                     $categoryHelper
+     * @param ResourceConnection $resource
+     * @param AppState\Proxy $appState
+     * @param CategoryHelper\Proxy $categoryHelper
+     * @param CategoryCollectionFactory $categoryCollectionFactory
+     * @param ProductCollectionFactory $productCollectionFactory
+     * @param ProductActionFactory\Proxy $productActionFactory
+     * @param CategoryUrlPathGenerator\Proxy $categoryUrlPathGenerator
      * @param CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory
-     * @param ProductUrlRewriteGeneratorFactory\Proxy  $productUrlRewriteGeneratorFactory
-     * @param UrlRewriteBunchReplacer\Proxy            $urlRewriteBunchReplacer
-     * @param UrlRewriteHandlerFactory\Proxy           $urlRewriteHandlerFactory
-     * @param DatabaseMapPool\Proxy                    $databaseMapPool
-     * @param ProductActionFactory\Proxy               $productActionFactory
-     * @param AppState\Proxy                           $appState
+     * @param ProductUrlPathGenerator\Proxy $productUrlPathGenerator
+     * @param ProductUrlRewriteGeneratorFactory\Proxy $productUrlRewriteGeneratorFactory
+     * @param UrlRewriteBunchReplacer\Proxy $urlRewriteBunchReplacer
+     * @param UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory
+     * @param DatabaseMapPool\Proxy $databaseMapPool
+     * @param UrlPersist\Proxy $urlPersist
+     * @param StoreManagerInterface $storeManager
      */
     public function __construct(
         ResourceConnection $resource,
@@ -200,7 +204,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         UrlRewriteBunchReplacer\Proxy $urlRewriteBunchReplacer,
         UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory,
         DatabaseMapPool\Proxy $databaseMapPool,
-        UrlPersist\Proxy $urlPersist
+        UrlPersist\Proxy $urlPersist,
+        StoreManagerInterface $storeManager
     ) {
         $this->_resource = $resource;
         $this->_appState = $appState;
@@ -216,6 +221,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_urlRewriteHandlerFactory = $urlRewriteHandlerFactory;
         $this->_databaseMapPool = $databaseMapPool;
         $this->_urlPersist = $urlPersist;
+        $this->_storeManager = $storeManager;
 
         $this->_dataUrlRewriteClassNames = [
             DataCategoryUrlRewriteDatabaseMap::class,

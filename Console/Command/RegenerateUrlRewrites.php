@@ -139,6 +139,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
         foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
             $this->_output->writeln('');
             $this->_output->writeln("[Store ID: {$storeId}, Store View code: {$storeCode}]:");
+            $this->_storeManager->setCurrentStore($storeId);
 
             if ($this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT) {
                 if (count($this->_commandOptions['productsFilter']) > 0) {
