@@ -10,6 +10,8 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
 
+use Magento\Catalog\Model\Product;
+
 abstract class RegenerateUrlRewritesProductAbstract extends RegenerateUrlRewritesAbstract
 {
     /**
@@ -61,7 +63,7 @@ abstract class RegenerateUrlRewritesProductAbstract extends RegenerateUrlRewrite
 
     /**
      * Regenerate Url Rewrite for specific product
-     * @param  object $product
+     * @param  Product $product
      * @param  integer $storeId
      * @return void
      */
@@ -92,6 +94,21 @@ abstract class RegenerateUrlRewritesProductAbstract extends RegenerateUrlRewrite
 
             try {
                 $this->_urlPersist->replace($productUrlRewriteResult);
+            } catch (\Magento\UrlRewrite\Model\Exception\UrlAlreadyExistsException $y) {
+                $connection = $product->getResource()->getConnection();
+
+                $conflictedUrls = array_map(function ($urlRewrite) use ($connection){
+                    return $connection->quote($urlRewrite['request_path']);
+                }, $y->getUrls());
+
+                $requestPath = implode(', ', $conflictedUrls);
+
+                $this->_displayConsoleMsg(
+                    'Some URL paths already exists in url_rewrite table and not related to Product ID: '. $product->getId() .
+                    '. Please remove them and execute this command again. You can find them by following SQL:'
+                );
+
+                $this->_displayConsoleMsg("SELECT * FROM url_rewrite WHERE store_id={$connection->quote($storeId, 'int')} AND request_path IN ({$requestPath});");
             } catch (\Exception $y) {
                 //to debugg error
                 $this->_displayConsoleMsg($y->getMessage() .' Product ID: '. $product->getId());
