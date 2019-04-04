@@ -33,24 +33,26 @@ use Magento\CatalogUrlRewrite\Observer\UrlRewriteHandlerFactory;
 use Magento\UrlRewrite\Model\UrlPersistInterface as UrlPersist;
 use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
 use Magento\Store\Model\StoreManagerInterface;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 
 abstract class RegenerateUrlRewritesAbstract extends Command
 {
-    const INPUT_KEY_STOREID                         = 'store-id';
-    const INPUT_KEY_REGENERATE_ENTITY_TYPE          = 'entity-type';
-    const INPUT_KEY_SAVE_REWRITES_HISTORY           = 'save-old-urls';
-    const INPUT_KEY_NO_REINDEX                      = 'no-reindex';
-    const INPUT_KEY_NO_PROGRESS                     = 'no-progress';
-    const INPUT_KEY_NO_CACHE_FLUSH                  = 'no-cache-flush';
-    const INPUT_KEY_NO_CACHE_CLEAN                  = 'no-cache-clean';
-    const INPUT_KEY_CATEGORIES_RANGE                = 'categories-range';
-    const INPUT_KEY_PRODUCTS_RANGE                  = 'products-range';
-    const INPUT_KEY_CATEGORY_ID                     = 'category-id';
-    const INPUT_KEY_PRODUCT_ID                      = 'product-id';
+    const INPUT_KEY_STOREID                              = 'store-id';
+    const INPUT_KEY_REGENERATE_ENTITY_TYPE               = 'entity-type';
+    const INPUT_KEY_SAVE_REWRITES_HISTORY                = 'save-old-urls';
+    const INPUT_KEY_NO_REINDEX                           = 'no-reindex';
+    const INPUT_KEY_NO_PROGRESS                          = 'no-progress';
+    const INPUT_KEY_NO_CACHE_FLUSH                       = 'no-cache-flush';
+    const INPUT_KEY_NO_CACHE_CLEAN                       = 'no-cache-clean';
+    const INPUT_KEY_CATEGORIES_RANGE                     = 'categories-range';
+    const INPUT_KEY_PRODUCTS_RANGE                       = 'products-range';
+    const INPUT_KEY_CATEGORY_ID                          = 'category-id';
+    const INPUT_KEY_PRODUCT_ID                           = 'product-id';
+    const INPUT_KEY_CHECK_USE_CATEGORIES_FOR_PRODUCT_URL = 'check-use-category-in-product-url';
 
-    const CONSOLE_LOG_MAX_DOTS_IN_LINE              = 70;
-    const INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT  = 'product';
-    const INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY = 'category';
+    const CONSOLE_LOG_MAX_DOTS_IN_LINE                   = 70;
+    const INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT       = 'product';
+    const INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY      = 'category';
 
     /**
      * @var \Magento\Framework\App\ResourceConnection
@@ -148,6 +150,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_productAction;
 
     /**
+     * @var \Magento\Framework\App\Config\ScopeConfigInterface
+     */
+    protected $_scopeConfig;
+
+    /**
      * @var array
      */
     protected $_dataUrlRewriteClassNames;
@@ -173,6 +180,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_errors = [];
 
     /**
+     * @var array
+     */
+    protected $_consoleMsg = [];
+
+    /**
      * Constructor
      * @param ResourceConnection $resource
      * @param AppState\Proxy $appState
@@ -189,6 +201,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @param DatabaseMapPool\Proxy $databaseMapPool
      * @param UrlPersist\Proxy $urlPersist
      * @param StoreManagerInterface $storeManager
+     * @param ScopeConfigInterface $scopeConfig
      */
     public function __construct(
         ResourceConnection $resource,
@@ -205,7 +218,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory,
         DatabaseMapPool\Proxy $databaseMapPool,
         UrlPersist\Proxy $urlPersist,
-        StoreManagerInterface $storeManager
+        StoreManagerInterface $storeManager,
+        ScopeConfigInterface $scopeConfig
     ) {
         $this->_resource = $resource;
         $this->_appState = $appState;
@@ -222,6 +236,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_databaseMapPool = $databaseMapPool;
         $this->_urlPersist = $urlPersist;
         $this->_storeManager = $storeManager;
+        $this->_scopeConfig = $scopeConfig;
 
         $this->_dataUrlRewriteClassNames = [
             DataCategoryUrlRewriteDatabaseMap::class,
@@ -242,6 +257,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_commandOptions['productsFilter'] = [];
         $this->_commandOptions['categoryId'] = null;
         $this->_commandOptions['productId'] = null;
+        $this->_commandOptions['checkUseCategoryInProductUrl'] = false;
     }
 
     /**
@@ -455,17 +471,34 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     }
 
     /**
-     * Display message in console
-     * @param  string $msg
+     * Collect console messages
+     * @param mixed $msg
      * @return void
      */
-    protected function _displayConsoleMsg($msg)
+    protected function _addConsoleMsg($msg)
     {
         if ($msg instanceof \Magento\Framework\Phrase) {
             $msg = $msg->render();
         }
-        $this->_output->writeln('');
-        $this->_output->writeln($msg);
+
+        $this->_consoleMsg[] = (string)$msg;
+    }
+
+    /**
+     * Display all console messages
+     * @return void
+     */
+    protected function _displayConsoleMsg()
+    {
+        if (count($this->_consoleMsg) > 0) {
+            $this->_output->writeln('[CONSOLE MESSAGES]');
+            foreach ($this->_consoleMsg as $msg) {
+                $this->_output->writeln($msg);
+            }
+            $this->_output->writeln('[END OF CONSOLE MESSAGES]');
+            $this->_output->writeln('');
+            $this->_output->writeln('');
+        }
     }
 
     /**
@@ -489,7 +522,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
                     } catch (\Exception $y) {
                         // debugging
                         $data = $singleUrlRewrite->toArray();
-                        $this->_displayConsoleMsg($y->getMessage() .' '. $type .' ID: '. $data['entity_id'] .'. Request path: '. $data['request_path']);
+                        $this->_addConsoleMsg($y->getMessage() .' '. $type .' ID: '. $data['entity_id'] .'. Request path: '. $data['request_path']);
                     }
                 }
             }
@@ -535,6 +568,20 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      */
     protected function _clearRequestPath($requestPath)
     {
-        return ltrim($requestPath, '/');
+        return str_replace(['//', './'], ['/', '/'], ltrim(ltrim($requestPath, '/'), '.'));
+    }
+
+    /**
+     * Get "Use Categories Path for Product URLs" config option value
+     * @param  mixed $storeId
+     * @return boolean
+     */
+    protected function _getUseCategoriesPathForProductUrlsConfig($storeId = null)
+    {
+        return (bool) $this->_scopeConfig->getValue(
+            'catalog/seo/product_use_categories',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORES,
+            $storeId
+        );
     }
 }

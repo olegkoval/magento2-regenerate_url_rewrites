@@ -86,7 +86,7 @@ abstract class RegenerateUrlRewritesCategoryAbstract extends RegenerateUrlRewrit
             $this->_displayProgressBar();
         } catch (\Exception $e) {
             // debugging
-            $this->_displayConsoleMsg('Exception: '. $e->getMessage() .' Category ID: '. $category->getId());
+            $this->_addConsoleMsg('Exception: '. $e->getMessage() .' Category ID: '. $category->getId());
         }
     }
 
@@ -104,17 +104,23 @@ abstract class RegenerateUrlRewritesCategoryAbstract extends RegenerateUrlRewrit
             $categoryUrlRewriteResult = $this->_getCategoryUrlRewriteGenerator()->generate($category, true);
             $this->_doBunchReplaceUrlRewrites($categoryUrlRewriteResult);
 
-            $productUrlRewriteResult = $this->_getUrlRewriteHandler()->generateProductUrlRewrites($category);
+            // if config option "Use Categories Path for Product URLs" is "Yes"
+            if (
+                ($this->_commandOptions['checkUseCategoryInProductUrl'] && $this->_getUseCategoriesPathForProductUrlsConfig($storeId))
+                || !$this->_commandOptions['checkUseCategoryInProductUrl']
+            ) {
+                $productUrlRewriteResult = $this->_getUrlRewriteHandler()->generateProductUrlRewrites($category);
 
-            // fix for double slashes issue
-            foreach ($productUrlRewriteResult as &$urlRewrite) {
-                $urlRewrite->setRequestPath($this->_clearRequestPath($urlRewrite->getRequestPath()));
+                // fix for double slashes issue and dots
+                foreach ($productUrlRewriteResult as &$urlRewrite) {
+                    $urlRewrite->setRequestPath($this->_clearRequestPath($urlRewrite->getRequestPath()));
+                }
+
+                $this->_doBunchReplaceUrlRewrites($productUrlRewriteResult, 'Product');
             }
-
-            $this->_doBunchReplaceUrlRewrites($productUrlRewriteResult, 'Product');
         } catch (\Exception $e) {
             // debugging
-            $this->_displayConsoleMsg('Exception: '. $e->getMessage() .' Category ID: '. $category->getId());
+            $this->_addConsoleMsg('Exception: '. $e->getMessage() .' Category ID: '. $category->getId());
         }
     }
 

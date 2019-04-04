@@ -101,6 +101,12 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
                     null,
                     InputArgument::OPTIONAL,
                     'Specific product ID, e.g.: 107 (Pro version only)'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_CHECK_USE_CATEGORIES_FOR_PRODUCT_URL,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Check if product use categories in URL'
                 )
             ]);
     }
@@ -123,7 +129,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
 
         if (count($this->_errors) > 0) {
             foreach ($this->_errors as $error) {
-                $this->_displayConsoleMsg($error);
+                $this->_addConsoleMsg($error);
             }
             return;
         }
@@ -175,6 +181,8 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
         $this->_output->writeln('');
         $this->_output->writeln('');
 
+        $this->_displayConsoleMsg();
+
         $this->_runReindexation();
         $this->_runClearCache();
 
@@ -220,6 +228,12 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
 
         if (isset($options[self::INPUT_KEY_NO_CACHE_FLUSH]) && $options[self::INPUT_KEY_NO_CACHE_FLUSH] === true) {
             $this->_commandOptions['runCacheFlush'] = false;
+        }
+
+        if (
+            isset($options[self::INPUT_KEY_CHECK_USE_CATEGORIES_FOR_PRODUCT_URL])
+            && $options[self::INPUT_KEY_CHECK_USE_CATEGORIES_FOR_PRODUCT_URL] === true) {
+            $this->_commandOptions['checkUseCategoryInProductUrl'] = true;
         }
 
         if (isset($options[self::INPUT_KEY_PRODUCTS_RANGE])) {

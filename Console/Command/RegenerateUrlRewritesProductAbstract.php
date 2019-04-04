@@ -87,7 +87,7 @@ abstract class RegenerateUrlRewritesProductAbstract extends RegenerateUrlRewrite
                 ['url_path' => null, 'url_key' => $generatedKey],
                 $storeId
             );
-            
+
             $productUrlRewriteResult = $this->_getProductUrlRewriteGenerator()->generate($product);
 
             $productUrlRewriteResult = $this->_sanitizeProductUrlRewrites($productUrlRewriteResult);
@@ -103,21 +103,21 @@ abstract class RegenerateUrlRewritesProductAbstract extends RegenerateUrlRewrite
 
                 $requestPath = implode(', ', $conflictedUrls);
 
-                $this->_displayConsoleMsg(
+                $this->_addConsoleMsg(
                     'Some URL paths already exists in url_rewrite table and not related to Product ID: '. $product->getId() .
                     '. Please remove them and execute this command again. You can find them by following SQL:'
                 );
 
-                $this->_displayConsoleMsg("SELECT * FROM url_rewrite WHERE store_id={$connection->quote($storeId, 'int')} AND request_path IN ({$requestPath});");
+                $this->_addConsoleMsg("SELECT * FROM url_rewrite WHERE store_id={$connection->quote($storeId, 'int')} AND request_path IN ({$requestPath});");
             } catch (\Exception $y) {
                 //to debugg error
-                $this->_displayConsoleMsg($y->getMessage() .' Product ID: '. $product->getId());
+                $this->_addConsoleMsg($y->getMessage() .' Product ID: '. $product->getId());
             }
 
             $this->_progress++;
             $this->_displayProgressBar();
         } catch (\Exception $e) {
-            $this->_displayConsoleMsg($e->getMessage() . ' Product ID: '. $product->getId());
+            $this->_addConsoleMsg($e->getMessage() . ' Product ID: '. $product->getId());
         }
     }
 

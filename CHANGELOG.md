@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.4.2] - 2019-04-04
+### Added
+- new option "--check-use-category-in-product-url"
+- info into log about conflicted URL Rewrites
+
+### Changed
+- fixed logical issues in url_key regeneration
+- fix for category/products rewrites for multistore
+- fixed issue of division by zero in progress bar
+- updated the url_key regeneration behavior to use UrlPathGenerators
+- modified logic of displaying a console messages (notifications, errors, exceptions...)
+
 ## [1.4.1] - 2019-02-20
 ### Changed
 - fixed issue of removing previously added URL rewrites of product when same URL key exists;
