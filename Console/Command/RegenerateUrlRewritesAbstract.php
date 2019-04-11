@@ -40,6 +40,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     const INPUT_KEY_STOREID                              = 'store-id';
     const INPUT_KEY_REGENERATE_ENTITY_TYPE               = 'entity-type';
     const INPUT_KEY_SAVE_REWRITES_HISTORY                = 'save-old-urls';
+    const INPUT_KEY_NO_REGEN_URL_KEY                     = 'no-regen-url-key';
     const INPUT_KEY_NO_REINDEX                           = 'no-reindex';
     const INPUT_KEY_NO_PROGRESS                          = 'no-progress';
     const INPUT_KEY_NO_CACHE_FLUSH                       = 'no-cache-flush';
@@ -258,6 +259,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_commandOptions['categoryId'] = null;
         $this->_commandOptions['productId'] = null;
         $this->_commandOptions['checkUseCategoryInProductUrl'] = false;
+        $this->_commandOptions[SELF::INPUT_KEY_NO_REGEN_URL_KEY] = false;
     }
 
     /**

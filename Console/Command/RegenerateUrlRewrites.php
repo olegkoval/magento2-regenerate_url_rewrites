@@ -107,7 +107,13 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
                     null,
                     InputOption::VALUE_NONE,
                     'Check if product use categories in URL'
-                )
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_REGEN_URL_KEY,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Prevent URL_key regeneration'
+                ),       
             ]);
     }
 
