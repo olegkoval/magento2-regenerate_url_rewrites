@@ -112,7 +112,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
                     self::INPUT_KEY_NO_REGEN_URL_KEY,
                     null,
                     InputOption::VALUE_NONE,
-                    'Prevent URL_key regeneration'
+                    'Prevent url_key regeneration'
                 ),       
             ]);
     }
@@ -218,6 +218,10 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
 
         if (isset($options[self::INPUT_KEY_SAVE_REWRITES_HISTORY]) && $options[self::INPUT_KEY_SAVE_REWRITES_HISTORY] === true) {
             $this->_commandOptions['saveOldUrls'] = true;
+        }
+
+        if (isset($options[self::INPUT_KEY_NO_REGEN_URL_KEY]) && $options[self::INPUT_KEY_NO_REGEN_URL_KEY] === true) {
+            $this->_commandOptions['noRegenUrlKey'] = true;
         }
 
         if (isset($options[self::INPUT_KEY_NO_REINDEX]) && $options[self::INPUT_KEY_NO_REINDEX] === true) {

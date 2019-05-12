@@ -75,6 +75,9 @@ or
 * to save a current URL rewrites (you want to get a new URL rewites and save current) use option `--save-old-urls`:
 >`$> php bin/magento ok:urlrewrites:regenerate --save-old-urls`
 
+* to prevent regeneration of "url_key" values (use current "url_key" values) use option `--no-regen-url-key`:
+>`$> php bin/magento ok:urlrewrites:regenerate --no-regen-url-key`
+
 * do not run full reindex at the end of URL rewrites generation use option `--no-reindex`:
 >`$> php bin/magento ok:urlrewrites:regenerate --no-reindex`
 
@@ -88,7 +91,7 @@ or
 >`$> php bin/magento ok:urlrewrites:regenerate --no-progress`
 
 ### YOU CAN COMBINE OPTIONS
->`$> php bin/magento ok:urlrewrites:regenerate --store-id=2 --save-old-urls --no-reindex`
+>`$> php bin/magento ok:urlrewrites:regenerate --store-id=2 --save-old-urls --no-regen-url-key --no-reindex`
 
 ### YOU CAN NOT COMBINE THIS OPTIONS TOGETHER
 * `--entity-type=product` and `--category-id`/`--categories-range`

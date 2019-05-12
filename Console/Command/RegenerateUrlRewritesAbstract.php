@@ -259,7 +259,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_commandOptions['categoryId'] = null;
         $this->_commandOptions['productId'] = null;
         $this->_commandOptions['checkUseCategoryInProductUrl'] = false;
-        $this->_commandOptions[SELF::INPUT_KEY_NO_REGEN_URL_KEY] = false;
+        $this->_commandOptions['noRegenUrlKey'] = false;
     }
 
     /**
