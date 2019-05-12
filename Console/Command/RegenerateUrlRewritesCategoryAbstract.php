@@ -72,8 +72,15 @@ abstract class RegenerateUrlRewritesCategoryAbstract extends RegenerateUrlRewrit
                 $category->setData('save_rewrites_history', true);
             }
             $category->setStoreId($storeId);
-            $category->setUrlKey($category->formatUrlKey($category->getName()));
-            $category->getResource()->saveAttribute($category, 'url_key');
+
+            if(!$this->_commandOptions[SELF::INPUT_KEY_NO_REGEN_URL_KEY]) {
+                $category->setData('url_key', null);
+
+                // URL Key needs to be regenerated before url_path, otherwise it may discord
+                $category->setUrlKey($this->_categoryUrlPathGenerator->getUrlKey($category));
+                $category->getResource()->saveAttribute($category, 'url_key');
+            }
+
             $category->setUrlPath($this->_categoryUrlPathGenerator->getUrlPath($category));
             $category->getResource()->saveAttribute($category, 'url_path');
 
