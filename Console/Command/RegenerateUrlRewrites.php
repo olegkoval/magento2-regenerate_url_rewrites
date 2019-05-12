@@ -349,7 +349,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
                 [
                     'o1' => $option1,
                     'o2' => $option2,
-                    'o4' => $option3
+                    'o3' => $option3
                 ]
             );
     }
