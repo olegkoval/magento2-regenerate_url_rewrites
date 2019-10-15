@@ -184,7 +184,7 @@ abstract class RegenerateUrlRewritesCategoryAbstract extends RegenerateUrlRewrit
         // use SQL to speed up and to not instantiate additional store object just for root category ID
         $tableName1 = $this->_resource->getTableName('store_group');
         $tableName2 = $this->_resource->getTableName('store');
-        $sql = "SELECT t1.root_category_id FROM {$tableName1} t1 INNER JOIN {$tableName2} t2 ON t2.website_id = t1.website_id WHERE t2.store_id = {$storeId};";
+        $sql = "SELECT t1.root_category_id FROM {$tableName1} t1 INNER JOIN {$tableName2} t2 ON t2.group_id = t1.group_id WHERE t2.store_id = {$storeId};";
 
         $result = (int) $this->_resource->getConnection()->fetchOne($sql);
 
