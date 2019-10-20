@@ -155,7 +155,7 @@ abstract class RegenerateUrlRewritesCategoryAbstract extends RegenerateUrlRewrit
             ->addAttributeToSelect('url_key')
             ->addAttributeToSelect('url_path')
             ->addFieldToFilter('level', array('gt' => '1'))
-            ->setOrder('level', 'DESC')
+            ->setOrder('level', 'ASC')
             // use limit to avoid a "eating" of a memory
             ->setPageSize($this->_categoriesCollectionPageSize);
 
