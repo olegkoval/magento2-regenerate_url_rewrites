@@ -73,7 +73,8 @@ abstract class RegenerateUrlRewritesCategoryAbstract extends RegenerateUrlRewrit
             }
             $category->setStoreId($storeId);
 
-            if (!$this->_commandOptions['noRegenUrlKey']) {
+            if (!$this->_commandOptions['noRegenUrlKey']) {// force regeneration
+                $category->setOrigData('url_key', null);
                 $category->setUrlKey($this->_categoryUrlPathGenerator->getUrlKey($category));
                 $category->getResource()->saveAttribute($category, 'url_key');
             }
