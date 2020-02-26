@@ -5,12 +5,12 @@
  *
  * @package OlegKoval_RegenerateUrlRewrites
  * @author Oleg Koval <contact@olegkoval.com>
- * @copyright 2017 Oleg Koval
+ * @copyright 2017-2067 Oleg Koval
  * @license OSL-3.0, AFL-3.0
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
-    <module name="OlegKoval_RegenerateUrlRewrites" setup_version="1.4.3">
+    <module name="OlegKoval_RegenerateUrlRewrites" setup_version="1.5.0">
         <sequence>
             <module name="Magento_Store"/>
             <module name="Magento_Catalog"/>
