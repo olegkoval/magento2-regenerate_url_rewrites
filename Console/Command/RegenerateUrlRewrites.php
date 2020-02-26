@@ -4,7 +4,7 @@
  *
  * @package OlegKoval_RegenerateUrlRewrites
  * @author Oleg Koval <contact@olegkoval.com>
- * @copyright 2018 Oleg Koval
+ * @copyright 2017-2067 Oleg Koval
  * @license OSL-3.0, AFL-3.0
  */
 
@@ -16,7 +16,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
+class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 {
     /**
      * @var null|Symfony\Component\Console\Input\InputInterface
@@ -103,12 +103,6 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
                     'Specific product ID, e.g.: 107 (Pro version only)'
                 ),
                 new InputOption(
-                    self::INPUT_KEY_CHECK_USE_CATEGORIES_FOR_PRODUCT_URL,
-                    null,
-                    InputOption::VALUE_NONE,
-                    'Check if product use categories in URL'
-                ),
-                new InputOption(
                     self::INPUT_KEY_NO_REGEN_URL_KEY,
                     null,
                     InputOption::VALUE_NONE,
@@ -150,37 +144,15 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
 
         foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
             $this->_output->writeln('');
-            $this->_output->writeln("[Store ID: {$storeId}, Store View code: {$storeCode}]:");
+            $this->_output->writeln("[Type: {$this->_commandOptions['entityType']}, Store ID: {$storeId}, Store View code: {$storeCode}]:");
             $this->_storeManager->setCurrentStore($storeId);
 
             if ($this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT) {
-                if (count($this->_commandOptions['productsFilter']) > 0) {
-                    $this->regenerateProductsRangeUrlRewrites(
-                        $this->_commandOptions['productsFilter'],
-                        $storeId
-                    );
-                } elseif (!empty($this->_commandOptions['productId'])) {
-                    $this->regenerateSpecificProductUrlRewrites(
-                        $this->_commandOptions['productId'],
-                        $storeId
-                    );
-                } else {
-                    $this->regenerateAllProductsUrlRewrites($storeId);
-                }
+                $this->regenerateProductRewrites->regenerateOptions = $this->_commandOptions;
+                $this->regenerateProductRewrites->regenerate($storeId);
             } elseif ($this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY) {
-                if (count($this->_commandOptions['categoriesFilter']) > 0) {
-                    $this->regenerateCategoriesRangeUrlRewrites(
-                        $this->_commandOptions['categoriesFilter'],
-                        $storeId
-                    );
-                } elseif (!empty($this->_commandOptions['categoryId'])) {
-                    $this->regenerateSpecificCategoryUrlRewrites(
-                        $this->_commandOptions['categoryId'],
-                        $storeId
-                    );
-                } else {
-                    $this->regenerateAllCategoriesUrlRewrites($storeId);
-                }
+                $this->regenerateCategoryRewrites->regenerateOptions = $this->_commandOptions;
+                $this->regenerateCategoryRewrites->regenerate($storeId);
             }
         }
 
@@ -238,12 +210,6 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesCategoryAbstract
 
         if (isset($options[self::INPUT_KEY_NO_CACHE_FLUSH]) && $options[self::INPUT_KEY_NO_CACHE_FLUSH] === true) {
             $this->_commandOptions['runCacheFlush'] = false;
-        }
-
-        if (
-            isset($options[self::INPUT_KEY_CHECK_USE_CATEGORIES_FOR_PRODUCT_URL])
-            && $options[self::INPUT_KEY_CHECK_USE_CATEGORIES_FOR_PRODUCT_URL] === true) {
-            $this->_commandOptions['checkUseCategoryInProductUrl'] = true;
         }
 
         if (isset($options[self::INPUT_KEY_PRODUCTS_RANGE])) {
