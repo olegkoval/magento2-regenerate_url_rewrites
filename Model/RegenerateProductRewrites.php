@@ -184,7 +184,7 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
         }
 
         if (!$this->regenerateOptions['noRegenUrlKey']) {
-            $generatedKey = $this->_getProductUrlPathGenerator()->getUrlKey($entity);
+            $generatedKey = $this->_getProductUrlPathGenerator()->getUrlKey($entity->setUrlKey(null));
             $this->_getProductAction()->updateAttributes(
                 [$entity->getId()],
                 ['url_path' => null, 'url_key' => $generatedKey],
