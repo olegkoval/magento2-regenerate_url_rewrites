@@ -236,6 +236,9 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                 'category'
             );
             $distinctOptionsUsed++;
+
+            // if this option was used then for 100% user want to regenerate entity type "category"
+            $this->_commandOptions['entityType'] = self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY;
         }
 
         if (isset($options[self::INPUT_KEY_CATEGORY_ID])) {
@@ -246,6 +249,9 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             } else {
                 $distinctOptionsUsed++;
             }
+
+            // if this option was used then for 100% user want to regenerate entity type "category"
+            $this->_commandOptions['entityType'] = self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY;
         }
 
         if (

@@ -19,6 +19,7 @@ use Magento\Catalog\Model\ResourceModel\Category\CollectionFactory as CategoryCo
 use Magento\CatalogUrlRewrite\Model\CategoryUrlPathGeneratorFactory;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGeneratorFactory;
 use Magento\CatalogUrlRewrite\Observer\UrlRewriteHandlerFactory;
+use OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites;
 
 class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 {
@@ -78,6 +79,11 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     protected $urlRewriteHandler;
 
     /**
+     * @var RegenerateProductRewrites
+     */
+    protected $regenerateProductRewrites;
+
+    /**
      * RegenerateCategoryRewrites constructor.
      * @param RegenerateHelper $helper
      * @param ResourceConnection $resourceConnection
@@ -89,7 +95,8 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         DatabaseMapPool\Proxy $databaseMapPool,
         CategoryUrlPathGeneratorFactory\Proxy $categoryUrlPathGeneratorFactory,
         CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory,
-        UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory
+        UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory,
+        RegenerateProductRewrites $regenerateProductRewrites
     )
     {
         parent::__construct($helper, $resourceConnection);
@@ -99,6 +106,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         $this->categoryUrlPathGeneratorFactory = $categoryUrlPathGeneratorFactory;
         $this->categoryUrlRewriteGeneratorFactory = $categoryUrlRewriteGeneratorFactory;
         $this->urlRewriteHandlerFactory = $urlRewriteHandlerFactory;
+        $this->regenerateProductRewrites = $regenerateProductRewrites;
 
         $this->dataUrlRewriteClassNames = [
             DataCategoryUrlRewriteDatabaseMap::class,
@@ -202,7 +210,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 
         if (!$this->regenerateOptions['noRegenUrlKey']) {
             $category->setOrigData('url_key', null);
-            $category->setUrlKey($this->_getCategoryUrlPathGenerator()->getUrlKey($category));
+            $category->setUrlKey($this->_getCategoryUrlPathGenerator()->getUrlKey($category->setUrlKey(null)));
             $category->getResource()->saveAttribute($category, 'url_key');
         }
 
@@ -217,10 +225,11 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 
         // if config option "Use Categories Path for Product URLs" is "Yes" then regenerate product urls
         if ($this->helper->useCategoriesPathForProductUrls($storeId)) {
-            $productUrlRewriteResult = $this->_getUrlRewriteHandler()->generateProductUrlRewrites($category);
-            if (!empty($productUrlRewriteResult)) {
-                $productUrlRewriteResult = $this->helper->sanitizeProductUrlRewrites($productUrlRewriteResult);
-                $this->saveUrlRewrites($productUrlRewriteResult);
+            $productsIds = $this->_getCategoriesProductsIds($category->getAllChildren());
+            if (!empty($productsIds)) {
+                $this->regenerateProductRewrites->regenerateOptions = $this->regenerateOptions;
+                $this->regenerateProductRewrites->regenerateOptions['showProgress'] = false;
+                $this->regenerateProductRewrites->regenerateProductsRangeUrlRewrites($productsIds, $storeId);
             }
         }
 
@@ -261,6 +270,29 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         }
 
         return $categoriesCollection;
+    }
+
+    /**
+     * Get products Ids which are related to specific categories
+     * @param string $categoryIds
+     * @return array
+     */
+    protected function _getCategoriesProductsIds($categoryIds = '')
+    {
+        $result = [];
+
+        if (!empty($categoryIds)) {
+            $select = $this->_getResourceConnection()->getConnection()->select()
+                ->from($this->_getCategoryProductsTableName(), ['product_id'])
+                ->where("category_id IN ({$categoryIds})");
+            $rows =  $this->_getResourceConnection()->getConnection()->fetchAll($select);
+
+            foreach ($rows as $row) {
+                $result[] = $row['product_id'];
+            }
+        }
+
+        return $result;
     }
 
     /**

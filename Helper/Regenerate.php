@@ -50,7 +50,9 @@ class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
     {
         return [
             'Please, support me on:',
-            'https://www.patreon.com/olegkoval'
+            'https://www.patreon.com/olegkoval',
+            'You can hire me via Upwork:',
+            'https://www.upwork.com/o/profiles/users/~01a40656da65c38d3a/'
         ];
     }
 

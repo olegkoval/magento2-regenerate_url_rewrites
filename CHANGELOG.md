@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.5.2] - 2020-03-18
+### Changed
+- updated logic of Url Rewrite regeneration via category entity
+- CLI options logic optimized (for category entity)
+
+## [1.5.1] - 2020-03-08
+### Changed
+- fixed issue of url_key and url rewrites regeneration based on product name value
+
+## [1.5.0] - 2020-02-26
+### Changed
+- revised and restructured code
+- modified functional-logic of extension
+- removed option "--check-use-category-in-product-url"
+
 ## [1.4.3] - 2019-05-12
 ### Added
 - new option "no-regen-url-key"

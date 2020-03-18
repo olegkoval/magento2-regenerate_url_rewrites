@@ -48,6 +48,11 @@ abstract class AbstractRegenerateRewrites
     protected $secondaryDbTable;
 
     /**
+     * @var string
+     */
+    protected $categoryProductsDbTable;
+
+    /**
      * Regenerate Rewrites custom options
      * @var array
      */
@@ -137,7 +142,7 @@ abstract class AbstractRegenerateRewrites
 
     /**
      * Show a progress bar in the console
-     * @return void
+     * @param int $size
      */
     protected function _showProgress($size = 70)
     {
@@ -197,6 +202,18 @@ abstract class AbstractRegenerateRewrites
         }
 
         return $this->secondaryDbTable;
+    }
+
+    /**
+     * @return string
+     */
+    protected function _getCategoryProductsTableName()
+    {
+        if (empty($this->categoryProductsDbTable)) {
+            $this->categoryProductsDbTable = $this->_getResourceConnection()->getTableName('catalog_category_product');
+        }
+
+        return $this->categoryProductsDbTable;
     }
 
     /**

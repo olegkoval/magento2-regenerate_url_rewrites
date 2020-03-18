@@ -9,6 +9,7 @@ Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrite
 
 ## DONATIONS / SUPPORT ME ON
 * [Patreon](https://www.patreon.com/olegkoval)
+* You can hire me via [Upwork](https://www.upwork.com/o/profiles/users/~01a40656da65c38d3a/)
 
 ## INSTALLATION
 
@@ -76,8 +77,6 @@ or
 >`$> php bin/magento ok:urlrewrites:regenerate --no-progress`
 
 #### REGENERATE URL REWRITES OF CATEGORY
-WARNING: When you regenerate Url Rewrites of some category then you also regenerate Url Rewrites of all products from this category AND Url Rewrites of all sub-categories (all levels - Magento use recursive logic) AND all products from this sub-categories. This is the built-in Magento logic. So, take into account that regenerating of Url Rewrites of any category (specially from top level) is a "heavy" process and it's take a time.
-
 * to regenerate Url Rewrites of all categories in all stores set entity type to "category":
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=category`
 
@@ -88,6 +87,8 @@ WARNING: When you regenerate Url Rewrites of some category then you also regener
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=category --categories-range=4-12`
 
 \* if in the range you have a gap of ID's (in range 4-12 category with ID "6" not exists) - do not worry, script handle this.
+
+\*\* If you use options `--category-id` or `--categories-range` then you can skip option `--entity-type=category` - extension will understand that you want to use a category entity.
 
 ### YOU CAN COMBINE OPTIONS
 >`$> php bin/magento ok:urlrewrites:regenerate --store-id=2 --save-old-urls --no-regen-url-key --no-reindex`
