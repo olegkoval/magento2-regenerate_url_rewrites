@@ -183,14 +183,20 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
             $entity->setData('save_rewrites_history', true);
         }
 
+        // reset url_path to null, we need this to set a flag to use a Url Rewrites:
+        // see logic in core Product Url model: \Magento\Catalog\Model\Product\Url::getUrl()
+        // if "request_path" is not null or equal to "false" then Magento do not serach and do not use Url Rewrites
+        $updateAttributes = ['url_path' => null];
         if (!$this->regenerateOptions['noRegenUrlKey']) {
             $generatedKey = $this->_getProductUrlPathGenerator()->getUrlKey($entity->setUrlKey(null));
-            $this->_getProductAction()->updateAttributes(
-                [$entity->getId()],
-                ['url_path' => null, 'url_key' => $generatedKey],
-                $storeId
-            );
+            $updateAttributes['url_key'] = $generatedKey;
         }
+
+        $this->_getProductAction()->updateAttributes(
+            [$entity->getId()],
+            $updateAttributes,
+            $storeId
+        );
 
         $urlRewrites = $this->_getProductUrlRewriteGenerator()->generate($entity);
         $urlRewrites = $this->helper->sanitizeProductUrlRewrites($urlRewrites);

@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.5.3] - 2020-03-21
+## [1.5.4] - 2020-03-21
+### Changed
+- fixed issue of non-empty/non-false "request_path" of product entity.
+- modified logic of Url Rewrite db table updates
+
+## [1.5.3] - 2020-03-20
 ### Changed
 - updated Url Rewrite preparing function
 - updated logic of Url Rewrite regeneration via category entity

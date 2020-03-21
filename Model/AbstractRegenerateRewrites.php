@@ -285,18 +285,23 @@ abstract class AbstractRegenerateRewrites
         $data = $this->_getResourceConnection()->getConnection()->fetchAll($select);
 
         if (!empty($data)) {
-            $this->_getResourceConnection()->getConnection()->beginTransaction();
-            try {
-                $this->_getResourceConnection()->getConnection()->insertOnDuplicate(
-                    $this->_getSecondaryTableName(),
-                    $data,
-                    ['product_id']
-                );
-                $this->_getResourceConnection()->getConnection()->commit();
+            // I'm using row-by-row inserts because some products/categories not exists in entity tables but Url Rewrites
+            // for this entities still exists in url_rewrite DB table.
+            // This is the issue of Magento EE (Data integrity/assurance of the accuracy and consistency of data)
+            // and this extension was made to not fix this, I just avoid this issue
+            foreach ($data as $row) {
+                $this->_getResourceConnection()->getConnection()->beginTransaction();
+                try {
+                    $this->_getResourceConnection()->getConnection()->insertOnDuplicate(
+                        $this->_getSecondaryTableName(),
+                        $row,
+                        ['product_id']
+                    );
+                    $this->_getResourceConnection()->getConnection()->commit();
 
-            } catch (\Exception $e) {
-                $this->_getResourceConnection()->getConnection()->rollBack();
-                throw $e;
+                } catch (\Exception $e) {
+                    $this->_getResourceConnection()->getConnection()->rollBack();
+                }
             }
         }
 
