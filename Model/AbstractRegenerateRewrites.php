@@ -128,7 +128,8 @@ abstract class AbstractRegenerateRewrites
         try {
             $this->_getResourceConnection()->getConnection()->insertOnDuplicate(
                 $this->_getMainTableName(),
-                $data
+                $data,
+                ['request_path', 'metadata']
             );
             $this->_getResourceConnection()->getConnection()->commit();
 
@@ -288,7 +289,8 @@ abstract class AbstractRegenerateRewrites
             try {
                 $this->_getResourceConnection()->getConnection()->insertOnDuplicate(
                     $this->_getSecondaryTableName(),
-                    $data
+                    $data,
+                    ['product_id']
                 );
                 $this->_getResourceConnection()->getConnection()->commit();
 
@@ -312,12 +314,17 @@ abstract class AbstractRegenerateRewrites
             $rewrite = $urlRewrite->toArray();
 
             // check if same Url Rewrite already exists
-            $originalRequestPath = $rewrite['request_path'];
+            $originalRequestPath = trim($rewrite['request_path']);
+
+            // skip empty Url Rewrites - I don't know how this possible, but it happens in Magento:
+            // maybe someone did import product programmatically and product(s) name(s) are empty
+            if (empty($originalRequestPath)) continue;
+
             $index = 0;
             while ($this->_urlRewriteExists($rewrite)) {
                 $index++;
                 $pathParts = pathinfo($originalRequestPath);
-                $rewrite['request_path'] = $pathParts['dirname'] . $pathParts['filename'] . '-'. $index . (!empty($pathParts['extension']) ? $pathParts['extension'] : '');
+                $rewrite['request_path'] = trim($pathParts['dirname'], '.') . $pathParts['filename'] . '-'. $index . (!empty($pathParts['extension']) ? '.'. $pathParts['extension'] : '');
             }
 
             $result[] = $rewrite;

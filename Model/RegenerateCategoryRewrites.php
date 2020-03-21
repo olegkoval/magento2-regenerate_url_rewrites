@@ -223,14 +223,11 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $this->saveUrlRewrites($categoryUrlRewriteResult);
         }
 
-        // if config option "Use Categories Path for Product URLs" is "Yes" then regenerate product urls
-        if ($this->helper->useCategoriesPathForProductUrls($storeId)) {
-            $productsIds = $this->_getCategoriesProductsIds($category->getAllChildren());
-            if (!empty($productsIds)) {
-                $this->regenerateProductRewrites->regenerateOptions = $this->regenerateOptions;
-                $this->regenerateProductRewrites->regenerateOptions['showProgress'] = false;
-                $this->regenerateProductRewrites->regenerateProductsRangeUrlRewrites($productsIds, $storeId);
-            }
+        $productsIds = $this->_getCategoriesProductsIds($category->getAllChildren());
+        if (!empty($productsIds)) {
+            $this->regenerateProductRewrites->regenerateOptions = $this->regenerateOptions;
+            $this->regenerateProductRewrites->regenerateOptions['showProgress'] = false;
+            $this->regenerateProductRewrites->regenerateProductsRangeUrlRewrites($productsIds, $storeId);
         }
 
         //frees memory for maps that are self-initialized in multiple classes that were called by the generators
