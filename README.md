@@ -9,7 +9,7 @@ Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrite
 
 ## DONATIONS / SUPPORT ME ON
 * [Patreon](https://www.patreon.com/olegkoval)
-* You can hire me via [Upwork](https://www.upwork.com/o/profiles/users/~01a40656da65c38d3a/)
+* [Fondy](https://api.fondy.eu/s/aeOD4YCieqKE7U)
 
 ## INSTALLATION
 

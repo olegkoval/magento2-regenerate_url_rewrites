@@ -33,13 +33,12 @@ class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
      */
     public function __construct(
         Context $context,
-        StoreManagerInterface $storeManager,
-        ScopeConfigInterface $scopeConfig
+        StoreManagerInterface $storeManager
     )
     {
         parent::__construct($context);
         $this->storeManager = $storeManager;
-        $this->scopeConfig = $scopeConfig;
+        $this->scopeConfig = $context->getScopeConfig();
     }
 
     /**
@@ -51,8 +50,7 @@ class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
         return [
             'Please, support me on:',
             'https://www.patreon.com/olegkoval',
-            'You can hire me via Upwork:',
-            'https://www.upwork.com/o/profiles/users/~01a40656da65c38d3a/'
+            'https://api.fondy.eu/s/aeOD4YCieqKE7U'
         ];
     }
 

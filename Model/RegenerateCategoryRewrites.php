@@ -223,11 +223,14 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $this->saveUrlRewrites($categoryUrlRewriteResult);
         }
 
-        $productsIds = $this->_getCategoriesProductsIds($category->getAllChildren());
-        if (!empty($productsIds)) {
-            $this->regenerateProductRewrites->regenerateOptions = $this->regenerateOptions;
-            $this->regenerateProductRewrites->regenerateOptions['showProgress'] = false;
-            $this->regenerateProductRewrites->regenerateProductsRangeUrlRewrites($productsIds, $storeId);
+        // if config option "Use Categories Path for Product URLs" is "Yes" then regenerate product urls
+        if ($this->helper->useCategoriesPathForProductUrls($storeId)) {
+            $productsIds = $this->_getCategoriesProductsIds($category->getAllChildren());
+            if (!empty($productsIds)) {
+                $this->regenerateProductRewrites->regenerateOptions = $this->regenerateOptions;
+                $this->regenerateProductRewrites->regenerateOptions['showProgress'] = false;
+                $this->regenerateProductRewrites->regenerateProductsRangeUrlRewrites($productsIds, $storeId);
+            }
         }
 
         //frees memory for maps that are self-initialized in multiple classes that were called by the generators
@@ -247,11 +250,12 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     protected function _getCategoriesCollection($categoriesFilter = [], $storeId = 0)
     {
         $categoriesCollection = $this->categoryCollectionFactory->create();
-
         $categoriesCollection->addAttributeToSelect('name')
             ->addAttributeToSelect('url_key')
             ->addAttributeToSelect('url_path')
-            ->addFieldToFilter('level', array('gt' => '1'))
+            // if we need to regenerate Url Rewrites for all categories then we select only top level
+            // and all sub-categories (and products) will be regenerated as child's
+            ->addFieldToFilter('level', (count($categoriesFilter) > 0 ? ['gt' => '1'] : 2))
             ->setOrder('level', 'ASC')
             // use limit to avoid a "eating" of a memory
             ->setPageSize($this->categoriesCollectionPageSize);

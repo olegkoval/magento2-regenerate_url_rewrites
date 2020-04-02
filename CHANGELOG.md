@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.5.5] - 2020-04-02
+### Changed
+- updated logic of Url Rewrite regeneration via category entity
+- fixed compilation issue in helper
+
 ## [1.5.4] - 2020-03-21
 ### Changed
 - fixed issue of non-empty/non-false "request_path" of product entity.
