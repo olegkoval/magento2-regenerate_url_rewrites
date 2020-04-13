@@ -325,11 +325,22 @@ abstract class AbstractRegenerateRewrites
             // maybe someone did import product programmatically and product(s) name(s) are empty
             if (empty($originalRequestPath)) continue;
 
+            // split generated Url Rewrite into parts
+            $pathParts = pathinfo($originalRequestPath);
+
+            // remove leading/trailing slashes and dots from parts
+            $pathParts['dirname'] = trim($pathParts['dirname'], './');
+            $pathParts['filename'] = trim($pathParts['filename'], './');
+
+            // re-set Url Rewrite with sanitized parts
+            $rewrite['request_path'] = $this->_mergePartsIntoRewriteRequest($pathParts);
+
+            // check if we have a duplicate (maybe exists product with same name => same Url Rewrite)
+            // if exists then add additional index to avoid a duplicates
             $index = 0;
             while ($this->_urlRewriteExists($rewrite)) {
                 $index++;
-                $pathParts = pathinfo($originalRequestPath);
-                $rewrite['request_path'] = trim($pathParts['dirname'], '.') . $pathParts['filename'] . '-'. $index . (!empty($pathParts['extension']) ? '.'. $pathParts['extension'] : '');
+                $rewrite['request_path'] = $this->_mergePartsIntoRewriteRequest($pathParts, $index);
             }
 
             $result[] = $rewrite;
@@ -352,6 +363,21 @@ abstract class AbstractRegenerateRewrites
             ->where('store_id = ?', $rewrite['store_id'])
             ->where('entity_id != ?', $rewrite['entity_id']);
         return $this->_getResourceConnection()->getConnection()->fetchOne($select);
+    }
+
+    /**
+     * Merge Url Rewrite parts into one string
+     * @param $pathParts
+     * @param string $index
+     * @return string
+     */
+    protected function _mergePartsIntoRewriteRequest($pathParts, $index = '')
+    {
+        $result = $pathParts['dirname'] .'/'. $pathParts['filename']
+            .(!empty($index) ? '-'. $index : '')
+            .(!empty($pathParts['extension']) ? '.'. $pathParts['extension'] : '');
+
+        return $result;
     }
 
     /**

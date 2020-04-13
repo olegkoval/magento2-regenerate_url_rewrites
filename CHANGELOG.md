@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.5.6] - 2020-04-13
+### Changed
+- updated logic of "cleaning" of Url Rewrites and duplications check
+
 ## [1.5.5] - 2020-04-02
 ### Changed
 - updated logic of Url Rewrite regeneration via category entity
