@@ -373,7 +373,7 @@ abstract class AbstractRegenerateRewrites
      */
     protected function _mergePartsIntoRewriteRequest($pathParts, $index = '')
     {
-        $result = $pathParts['dirname'] .'/'. $pathParts['filename']
+        $result = (!empty($pathParts['dirname']) ? $pathParts['dirname'] .'/' : '') . $pathParts['filename']
             .(!empty($index) ? '-'. $index : '')
             .(!empty($pathParts['extension']) ? '.'. $pathParts['extension'] : '');
 
