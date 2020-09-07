@@ -3,7 +3,7 @@
     "description": "Add into Magento 2 a CLI feature which allow to regenerate a Url Rewrites of products and categories",
     "keywords": ["magento", "magento2 extension", "magento 2 extension", "extension", "module", "magento2 module", "magento 2 module"],
     "type": "magento2-module",
-    "version": "1.5.6",
+    "version": "1.6.0",
     "homepage": "https://github.com/olegkoval/magento2-regenerate_url_rewrites",
     "authors": [
         {
