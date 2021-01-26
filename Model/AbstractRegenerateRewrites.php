@@ -332,15 +332,18 @@ abstract class AbstractRegenerateRewrites
             $pathParts['dirname'] = trim($pathParts['dirname'], './');
             $pathParts['filename'] = trim($pathParts['filename'], './');
 
+            // If the last symbol was slash - let's use it as url suffix
+            $urlSuffix = substr($originalRequestPath, -1) === '/' ? '/' : '';
+
             // re-set Url Rewrite with sanitized parts
-            $rewrite['request_path'] = $this->_mergePartsIntoRewriteRequest($pathParts);
+            $rewrite['request_path'] = $this->_mergePartsIntoRewriteRequest($pathParts, '', $urlSuffix);
 
             // check if we have a duplicate (maybe exists product with same name => same Url Rewrite)
             // if exists then add additional index to avoid a duplicates
             $index = 0;
             while ($this->_urlRewriteExists($rewrite)) {
                 $index++;
-                $rewrite['request_path'] = $this->_mergePartsIntoRewriteRequest($pathParts, $index);
+                $rewrite['request_path'] = $this->_mergePartsIntoRewriteRequest($pathParts, (string)$index, $urlSuffix);
             }
 
             $result[] = $rewrite;
@@ -369,13 +372,15 @@ abstract class AbstractRegenerateRewrites
      * Merge Url Rewrite parts into one string
      * @param $pathParts
      * @param string $index
+     * @param string $urlSuffix
      * @return string
      */
-    protected function _mergePartsIntoRewriteRequest($pathParts, $index = '')
+    protected function _mergePartsIntoRewriteRequest($pathParts, $index = '', $urlSuffix = '')
     {
-        $result = (!empty($pathParts['dirname']) ? $pathParts['dirname'] .'/' : '') . $pathParts['filename']
-            .(!empty($index) ? '-'. $index : '')
-            .(!empty($pathParts['extension']) ? '.'. $pathParts['extension'] : '');
+        $result = (!empty($pathParts['dirname']) ? $pathParts['dirname'] . '/' : '') . $pathParts['filename']
+            . (!empty($index) ? '-' . $index : '')
+            . (!empty($pathParts['extension']) ? '.' . $pathParts['extension'] : '')
+            . ($urlSuffix ?: '');
 
         return $result;
     }
