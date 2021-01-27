@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.6.0] - 2021-01-27
+### Changed
+- adapted to Magento 2.3.5
+- fixed incorrect generation when URL suffix is slash
+
 ## [1.5.6] - 2020-04-13
 ### Changed
 - updated logic of "cleaning" of Url Rewrites and duplications check
