@@ -10,6 +10,9 @@ Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrite
 ## DONATIONS / SUPPORT ME ON
 * [Patreon](https://www.patreon.com/olegkoval)
 * [Fondy](https://api.fondy.eu/s/aeOD4YCieqKE7U)
+* BTC: bc1qssffnksrcfwalmg06n6dlr98vh9576hcer44q2
+* ETC: 0x297dE8348E4B8f6Ce7fF25D23bD8a8E60b26b969
+* BNB: bnb1r8gqxca0fsa2cyqr2e2g5eu4h3cdar57zp48xa
 
 ## INSTALLATION
 
