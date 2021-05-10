@@ -213,7 +213,8 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $category->setUrlKey($this->_getCategoryUrlPathGenerator()->getUrlKey($category->setUrlKey(null)));
             $category->getResource()->saveAttribute($category, 'url_key');
         }
-
+        
+        $category->unsUrlPath();
         $category->setUrlPath($this->_getCategoryUrlPathGenerator()->getUrlPath($category));
         $category->getResource()->saveAttribute($category, 'url_path');
 
