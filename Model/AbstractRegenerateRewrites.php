@@ -349,6 +349,10 @@ abstract class AbstractRegenerateRewrites
             $result[] = $rewrite;
         }
 
+        array_walk($result, function (&$rowData) {
+            ksort($rowData);
+        });
+
         return $result;
     }
 
