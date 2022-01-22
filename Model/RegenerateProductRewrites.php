@@ -10,6 +10,7 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Model;
 
+use Magento\Framework\Model\ResourceModel\Iterator;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Catalog\Model\ResourceModel\Product\ActionFactory as ProductActionFactory;
@@ -72,6 +73,7 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
      * @param ProductUrlRewriteGeneratorFactory\Proxy $productUrlRewriteGeneratorFactory
      * @param ProductUrlPathGeneratorFactory\Proxy $productUrlPathGeneratorFactory
      * @param ProductCollectionFactory $productCollectionFactory
+     * @param Iterator $iterator
      */
     public function __construct(
         RegenerateHelper $helper,
@@ -79,10 +81,11 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
         ProductActionFactory $productActionFactory,
         ProductUrlRewriteGeneratorFactory\Proxy $productUrlRewriteGeneratorFactory,
         ProductUrlPathGeneratorFactory\Proxy $productUrlPathGeneratorFactory,
-        ProductCollectionFactory $productCollectionFactory
+        ProductCollectionFactory $productCollectionFactory,
+        Iterator $iterator
     )
     {
-        parent::__construct($helper, $resourceConnection);
+        parent::__construct($helper, $resourceConnection, $iterator);
 
         $this->productActionFactory = $productActionFactory;
         $this->productUrlRewriteGeneratorFactory = $productUrlRewriteGeneratorFactory;

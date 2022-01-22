@@ -10,6 +10,7 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Model;
 
+use Magento\Framework\Model\ResourceModel\Iterator;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
 use Magento\CatalogUrlRewrite\Model\Map\DatabaseMapPool;
@@ -87,6 +88,13 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
      * RegenerateCategoryRewrites constructor.
      * @param RegenerateHelper $helper
      * @param ResourceConnection $resourceConnection
+     * @param CategoryCollectionFactory $categoryCollectionFactory
+     * @param DatabaseMapPool\Proxy $databaseMapPool
+     * @param CategoryUrlPathGeneratorFactory\Proxy $categoryUrlPathGeneratorFactory
+     * @param CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory
+     * @param UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory
+     * @param RegenerateProductRewrites $regenerateProductRewrites
+     * @param Iterator $iterator
      */
     public function __construct(
         RegenerateHelper $helper,
@@ -96,10 +104,11 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         CategoryUrlPathGeneratorFactory\Proxy $categoryUrlPathGeneratorFactory,
         CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory,
         UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory,
-        RegenerateProductRewrites $regenerateProductRewrites
+        RegenerateProductRewrites $regenerateProductRewrites,
+        Iterator $iterator
     )
     {
-        parent::__construct($helper, $resourceConnection);
+        parent::__construct($helper, $resourceConnection, $iterator);
 
         $this->categoryCollectionFactory = $categoryCollectionFactory;
         $this->databaseMapPool = $databaseMapPool;
@@ -213,7 +222,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $category->setUrlKey($this->_getCategoryUrlPathGenerator()->getUrlKey($category->setUrlKey(null)));
             $category->getResource()->saveAttribute($category, 'url_key');
         }
-        
+
         $category->unsUrlPath();
         $category->setUrlPath($this->_getCategoryUrlPathGenerator()->getUrlPath($category));
         $category->getResource()->saveAttribute($category, 'url_path');
