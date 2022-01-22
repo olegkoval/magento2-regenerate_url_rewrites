@@ -10,6 +10,7 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Model;
 
+use Magento\Framework\Model\ResourceModel\Iterator;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
 use Magento\UrlRewrite\Model\Storage\DbStorage;
@@ -69,16 +70,25 @@ abstract class AbstractRegenerateRewrites
     protected $resourceConnection;
 
     /**
+     * @var Iterator
+     */
+    protected $iterator;
+
+    /**
      * RegenerateAbstract constructor.
      * @param RegenerateHelper $helper
+     * @param ResourceConnection $resourceConnection
+     * @param Iterator $iterator
      */
     public function __construct(
         RegenerateHelper $helper,
-        ResourceConnection $resourceConnection
+        ResourceConnection $resourceConnection,
+        Iterator $iterator
     )
     {
         $this->helper = $helper;
         $this->resourceConnection = $resourceConnection;
+        $this->iterator = $iterator;
 
         // set default regenerate options
         $this->regenerateOptions['saveOldUrls'] = false;
@@ -257,6 +267,10 @@ abstract class AbstractRegenerateRewrites
      */
     protected function _updateSecondaryTable()
     {
+        if (!empty($this->regenerateOptions['regenerateCategoryTable'])) {
+            return $this;
+        }
+
         $this->_getResourceConnection()->getConnection()->beginTransaction();
         try {
             $this->_getResourceConnection()->getConnection()->delete(
@@ -275,35 +289,21 @@ abstract class AbstractRegenerateRewrites
                 [
                     'url_rewrite_id',
                     'category_id' => new \Zend_Db_Expr(
-                        'SUBSTRING_INDEX(SUBSTRING_INDEX('.$this->_getMainTableName().'.metadata, \'"\', -2), \'"\', 1)'
+                        'SUBSTRING_INDEX(SUBSTRING_INDEX(' . $this->_getMainTableName()
+                        . '.metadata, \'"\', -2), \'"\', 1)'
                     ),
-                    'product_id' =>'entity_id'
+                    'product_id' => 'entity_id',
                 ]
             )
             ->where('metadata LIKE \'{"category_id":"%"}\'')
+            ->where('entity_type = \'product\'')
             ->where("url_rewrite_id NOT IN (SELECT url_rewrite_id FROM {$this->_getSecondaryTableName()})");
-        $data = $this->_getResourceConnection()->getConnection()->fetchAll($select);
 
-        if (!empty($data)) {
-            // I'm using row-by-row inserts because some products/categories not exists in entity tables but Url Rewrites
-            // for this entities still exists in url_rewrite DB table.
-            // This is the issue of Magento EE (Data integrity/assurance of the accuracy and consistency of data)
-            // and this extension was made to not fix this, I just avoid this issue
-            foreach ($data as $row) {
-                $this->_getResourceConnection()->getConnection()->beginTransaction();
-                try {
-                    $this->_getResourceConnection()->getConnection()->insertOnDuplicate(
-                        $this->_getSecondaryTableName(),
-                        $row,
-                        ['product_id']
-                    );
-                    $this->_getResourceConnection()->getConnection()->commit();
-
-                } catch (\Exception $e) {
-                    $this->_getResourceConnection()->getConnection()->rollBack();
-                }
-            }
-        }
+        $this->iterator
+            ->walk(
+                $select,
+                [[$this, 'insertRewriteToSecondary']]
+            );
 
         return $this;
     }
@@ -401,5 +401,30 @@ abstract class AbstractRegenerateRewrites
         }
 
         return $this->storeRootCategoryId[$storeId];
+    }
+
+    /**
+     * @param $args
+     */
+    public function insertRewriteToSecondary($args)
+    {
+        // I'm using row-by-row inserts because some products/categories not exists in entity tables but Url Rewrites
+        // for this entities still exists in url_rewrite DB table.
+        // This is the issue of Magento Commerce (Data integrity/assurance of the accuracy and consistency of data)
+        // and this extension was made to not fix this, I just avoid this issue
+        $row = $args['row'];
+        $this->_getResourceConnection()->getConnection()->beginTransaction();
+        try {
+            $this->_getResourceConnection()->getConnection()->insertOnDuplicate(
+                $this->_getSecondaryTableName(),
+                $row,
+                ['product_id']
+            );
+            $this->_getResourceConnection()->getConnection()->commit();
+        } catch (\Exception $e) {
+            $this->_getResourceConnection()->getConnection()->rollBack();
+            $this->_getResourceConnection()->getConnection()
+                ->delete($this->_getMainTableName(), 'url_rewrite_id=' . $row['url_rewrite_id']);
+        }
     }
 }
