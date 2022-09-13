@@ -34,6 +34,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     const INPUT_KEY_NO_CACHE_CLEAN                       = 'no-cache-clean';
     const INPUT_KEY_CATEGORIES_RANGE                     = 'categories-range';
     const INPUT_KEY_PRODUCTS_RANGE                       = 'products-range';
+    const INPUT_KEY_PRODUCTS_TYPE                        = 'products-type';
     const INPUT_KEY_CATEGORY_ID                          = 'category-id';
     const INPUT_KEY_PRODUCT_ID                           = 'product-id';
     const INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT       = 'product';
