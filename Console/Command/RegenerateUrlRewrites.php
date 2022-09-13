@@ -91,6 +91,12 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     'Products ID range, e.g.: 101-152 (Pro version only)'
                 ),
                 new InputOption(
+                    self::INPUT_KEY_PRODUCTS_TYPE,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Products Type, e.g.: grouped, simple (Pro version only)'
+                ),
+                new InputOption(
                     self::INPUT_KEY_CATEGORY_ID,
                     null,
                     InputArgument::OPTIONAL,
@@ -219,6 +225,14 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             );
             $distinctOptionsUsed++;
         }
+        
+        if (isset($options[self::INPUT_KEY_PRODUCTS_TYPE])) {
+            $this->_commandOptions['productsFilter'] = $this->_generateIdsTypeArray(
+                $options[self::INPUT_KEY_PRODUCTS_TYPE],
+                'product'
+            );
+            $distinctOptionsUsed++;
+        }
 
         if (isset($options[self::INPUT_KEY_PRODUCT_ID])) {
             $this->_commandOptions['productId'] = (int)$options[self::INPUT_KEY_PRODUCT_ID];
@@ -278,6 +292,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             $this->_errors[] = $this->_getLogicalConflictError(
                 self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY,
                 self::INPUT_KEY_PRODUCTS_RANGE,
+                self::INPUT_KEY_PRODUCTS_TYPE,
                 self::INPUT_KEY_PRODUCT_ID
             );
         }
@@ -289,7 +304,8 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     'o1' => self::INPUT_KEY_CATEGORIES_RANGE,
                     'o2' => self::INPUT_KEY_PRODUCTS_RANGE,
                     'o3' => self::INPUT_KEY_CATEGORY_ID,
-                    'o4' => self::INPUT_KEY_PRODUCT_ID
+                    'o4' => self::INPUT_KEY_PRODUCT_ID,
+                    'o5' => self::INPUT_KEY_PRODUCTS_TYPE
                 ]
             );
         }
