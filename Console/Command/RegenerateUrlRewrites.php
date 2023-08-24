@@ -115,7 +115,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
      * Regenerate Url Rewrites
      * @param  InputInterface  $input
      * @param  OutputInterface $output
-     * @return void
+     * @return int 0 if everything went fine, or an exit code
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
