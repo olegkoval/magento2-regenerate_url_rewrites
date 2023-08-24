@@ -3,7 +3,7 @@
  * Regenerate Url rewrites
  *
  * @package OlegKoval_RegenerateUrlRewrites
- * @author Oleg Koval <contact@olegkoval.com>
+ * @author Oleg Koval <olegkoval.ca@gmail.com>
  * @copyright 2017-2067 Oleg Koval
  * @license OSL-3.0, AFL-3.0
  */
@@ -107,7 +107,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     null,
                     InputOption::VALUE_NONE,
                     'Prevent url_key regeneration'
-                ),       
+                ),
             ]);
     }
 
@@ -131,7 +131,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             foreach ($this->_errors as $error) {
                 $this->_addConsoleMsg($error);
             }
-            return;
+            return  Command::FAILURE;
         }
 
         // set area code if needed
@@ -167,7 +167,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         $this->_showSupportMe();
         $this->_output->writeln('Finished');
 
-        return 0;
+        return  Command::SUCCESS;
     }
 
     /**

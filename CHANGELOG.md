@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.6.1] - 2023-08-24
+### Changed
+- fixed compatibility with Symfony Console 5 and Magento 2.4.6
+- updated contact email to Gmail email (my own domain olegkoval.com was stolen)
+
 ## [1.6.0] - 2021-01-27
 ### Changed
 - adapted to Magento 2.3.5

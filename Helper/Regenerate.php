@@ -3,7 +3,7 @@
  * Regenerate.php
  *
  * @package OlegKoval_RegenerateUrlRewrites
- * @author Oleg Koval <contact@olegkoval.com>
+ * @author Oleg Koval <olegkoval.ca@gmail.com>
  * @copyright 2017-2067 Oleg Koval
  * @license OSL-3.0, AFL-3.0
  */
@@ -49,8 +49,8 @@ class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
     {
         return [
             'Please, support me on:',
+            'https://www.paypal.com/donate/?business=C8YJBM9DDP9QL&no_recurring=0&currency_code=USD',
             'https://www.patreon.com/olegkoval',
-            'https://api.fondy.eu/s/aeOD4YCieqKE7U'
         ];
     }
 
