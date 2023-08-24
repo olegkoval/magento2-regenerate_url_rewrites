@@ -4,15 +4,12 @@ Magento 2 "Regenerate Url rewrites" extension add a CLI feature which allow to r
 Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrites
 
 ## CONTACTS
-* Email: contact@olegkoval.com
+* Email: olegkoval.ca@gmail.com
 * LinkedIn: https://www.linkedin.com/in/oleg-koval-85bb2314/
 
 ## DONATIONS / SUPPORT ME ON
+* [PayPal](https://www.paypal.com/donate/?business=C8YJBM9DDP9QL&no_recurring=0&currency_code=USD)
 * [Patreon](https://www.patreon.com/olegkoval)
-* [Fondy](https://api.fondy.eu/s/aeOD4YCieqKE7U)
-* BTC: bc1qssffnksrcfwalmg06n6dlr98vh9576hcer44q2
-* ETC: 0x297dE8348E4B8f6Ce7fF25D23bD8a8E60b26b969
-* BNB: bnb1r8gqxca0fsa2cyqr2e2g5eu4h3cdar57zp48xa
 
 ## INSTALLATION
 

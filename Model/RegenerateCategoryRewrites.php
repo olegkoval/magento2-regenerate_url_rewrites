@@ -3,7 +3,7 @@
  * RegenerateCategoryRewrites.php
  *
  * @package OlegKoval_RegenerateUrlRewrites
- * @author Oleg Koval <contact@olegkoval.com>
+ * @author Oleg Koval <olegkoval.ca@gmail.com>
  * @copyright 2017-2067 Oleg Koval
  * @license OSL-3.0, AFL-3.0
  */
