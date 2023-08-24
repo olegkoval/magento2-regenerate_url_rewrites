@@ -107,7 +107,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     null,
                     InputOption::VALUE_NONE,
                     'Prevent url_key regeneration'
-                ),       
+                ),
             ]);
     }
 
@@ -131,7 +131,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             foreach ($this->_errors as $error) {
                 $this->_addConsoleMsg($error);
             }
-            return;
+            return  Command::FAILURE;
         }
 
         // set area code if needed
@@ -166,6 +166,8 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 
         $this->_showSupportMe();
         $this->_output->writeln('Finished');
+
+        return  Command::SUCCESS;
     }
 
     /**
