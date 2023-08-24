@@ -8,7 +8,7 @@ Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrite
 * LinkedIn: https://www.linkedin.com/in/oleg-koval-85bb2314/
 
 ## DONATIONS / SUPPORT ME ON
-* [PayPal](https://www.paypal.com/donate/?business=C8YJBM9DDP9QL&no_recurring=0&currency_code=USD)
+* [PayPal](https://www.paypal.me/olegkoval77)
 * [Patreon](https://www.patreon.com/olegkoval)
 
 ## INSTALLATION

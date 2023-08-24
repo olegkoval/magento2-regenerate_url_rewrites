@@ -49,7 +49,7 @@ class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
     {
         return [
             'Please, support me on:',
-            'https://www.paypal.com/donate/?business=C8YJBM9DDP9QL&no_recurring=0&currency_code=USD',
+            'https://www.paypal.me/olegkoval77',
             'https://www.patreon.com/olegkoval',
         ];
     }
