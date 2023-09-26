@@ -265,6 +265,7 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
             ->addAttributeToSelect('visibility')
             ->addAttributeToSelect('url_key')
             ->addAttributeToSelect('url_path')
+            ->addAttributeToFilter('visibility', ['neq' => 1])
             // use limit to avoid a "eating" of a memory
             ->setPageSize($this->productsCollectionPageSize);
 
