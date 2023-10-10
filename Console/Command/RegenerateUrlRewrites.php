@@ -19,6 +19,18 @@ use Symfony\Component\Console\Output\OutputInterface;
 class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 {
     /**
+     * Code of success command action.
+     * Code was added because old version of Symfony Command do not have this constant.
+     */
+    const SUCCESS = 0;
+
+    /**
+     * Code of fail command action
+     * Code was added because old version of Symfony Command do not have this constant.
+     */
+    const FAILURE = 1;
+
+    /**
      * @var null|Symfony\Component\Console\Input\InputInterface
      */
     protected $_input = null;
@@ -131,7 +143,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             foreach ($this->_errors as $error) {
                 $this->_addConsoleMsg($error);
             }
-            return  Command::FAILURE;
+            return  self::FAILURE;
         }
 
         // set area code if needed
@@ -167,7 +179,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         $this->_showSupportMe();
         $this->_output->writeln('Finished');
 
-        return  Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     /**

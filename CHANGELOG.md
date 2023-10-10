@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.6.2] - 2023-10-10
+### Changed
+- fixed Symfony Command constant issue
+
 ## [1.6.1] - 2023-08-24
 ### Changed
 - fixed compatibility with Symfony Console 5 and Magento 2.4.6
