@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ## [1.6.2] - 2023-10-10
 ### Changed
 - fixed Symfony Command constant issue
+- exclude non visible products from url regeneration
 
 ## [1.6.1] - 2023-08-24
 ### Changed
