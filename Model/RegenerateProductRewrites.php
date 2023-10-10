@@ -10,6 +10,7 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Model;
 
+use Magento\Catalog\Model\Product\Visibility;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Catalog\Model\ResourceModel\Product\ActionFactory as ProductActionFactory;
@@ -265,6 +266,7 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
             ->addAttributeToSelect('visibility')
             ->addAttributeToSelect('url_key')
             ->addAttributeToSelect('url_path')
+            ->addAttributeToFilter('visibility', ['neq' => Visibility::VISIBILITY_NOT_VISIBLE])
             // use limit to avoid a "eating" of a memory
             ->setPageSize($this->productsCollectionPageSize);
 
