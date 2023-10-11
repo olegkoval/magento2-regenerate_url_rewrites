@@ -34,6 +34,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     const INPUT_KEY_NO_CACHE_CLEAN                       = 'no-cache-clean';
     const INPUT_KEY_CATEGORIES_RANGE                     = 'categories-range';
     const INPUT_KEY_PRODUCTS_RANGE                       = 'products-range';
+    const INPUT_KEY_PRODUCTS_TYPE                        = 'products-type';
     const INPUT_KEY_CATEGORY_ID                          = 'category-id';
     const INPUT_KEY_PRODUCT_ID                           = 'product-id';
     const INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT       = 'product';
@@ -195,6 +196,35 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         // if not entity_id in this range - show error
         if (count($result) == 0) {
             $this->_errors[] = __("ERROR: %type ID's in this range not exists", ['type' => ucfirst($type)]);
+        }
+
+        return $result;
+    }
+    
+    /**
+     * Generate from product's type
+     * @param  string $productType
+     * @param  string $type
+     * @return array
+     */
+    protected function _generateIdsTypeArray($productType, $type = 'product')
+    {
+        
+		$type = 'product';
+        
+        $tableName = $this->_resource->getTableName('catalog_product_entity');
+        
+        $sql = "SELECT entity_id FROM {$tableName} WHERE type_id = '{$productType}' ORDER BY entity_id";
+
+        $queryResult = $this->_resource->getConnection()->fetchAll($sql);
+
+        foreach ($queryResult as $row) {
+            $result[] = (int)$row['entity_id'];
+        }
+
+        // if not entity_id in this range - show error
+        if (count($result) == 0) {
+            $this->_errors[] = __("ERROR: %type ID's in this product type not exists", ['type' => ucfirst($type)]);
         }
 
         return $result;
