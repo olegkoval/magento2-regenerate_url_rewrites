@@ -1,6 +1,6 @@
-“Regenerate Url rewrites” extension
+“Regenerate Url Rewrites” extension
 =====================
-Magento 2 "Regenerate Url rewrites" extension add a CLI feature which allow to regenerate a Url rewrites of products/categories in all stores or specific store.
+Magento 2 "Regenerate Url Rewrites" extension add a CLI feature which allow to regenerate a Url rewrites of products/categories in all stores or specific store.
 Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrites
 
 ## CONTACTS

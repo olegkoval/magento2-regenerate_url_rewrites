@@ -10,6 +10,8 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Model;
 
+use Magento\Catalog\Model\ResourceModel\Category\Collection;
+use Magento\Framework\Exception\LocalizedException;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
 use Magento\CatalogUrlRewrite\Model\Map\DatabaseMapPool;
@@ -17,9 +19,11 @@ use Magento\CatalogUrlRewrite\Model\Map\DataCategoryUrlRewriteDatabaseMap;
 use Magento\CatalogUrlRewrite\Model\Map\DataProductUrlRewriteDatabaseMap;
 use Magento\Catalog\Model\ResourceModel\Category\CollectionFactory as CategoryCollectionFactory;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlPathGeneratorFactory;
+use Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGeneratorFactory;
+use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator;
 use Magento\CatalogUrlRewrite\Observer\UrlRewriteHandlerFactory;
-use OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites;
+use Magento\CatalogUrlRewrite\Observer\UrlRewriteHandler;
 
 class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 {
@@ -39,7 +43,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     protected $dataUrlRewriteClassNames = [];
 
     /**
-     * @var MapDatabaseMapPool
+     * @var DatabaseMapPool
      */
     protected $databaseMapPool;
 
@@ -84,19 +88,24 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     protected $regenerateProductRewrites;
 
     /**
-     * RegenerateCategoryRewrites constructor.
      * @param RegenerateHelper $helper
      * @param ResourceConnection $resourceConnection
+     * @param CategoryCollectionFactory $categoryCollectionFactory
+     * @param DatabaseMapPool\Proxy $databaseMapPool
+     * @param CategoryUrlPathGeneratorFactory\Proxy $categoryUrlPathGeneratorFactory
+     * @param CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory
+     * @param UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory
+     * @param RegenerateProductRewrites $regenerateProductRewrites
      */
     public function __construct(
-        RegenerateHelper $helper,
-        ResourceConnection $resourceConnection,
-        CategoryCollectionFactory $categoryCollectionFactory,
-        DatabaseMapPool\Proxy $databaseMapPool,
-        CategoryUrlPathGeneratorFactory\Proxy $categoryUrlPathGeneratorFactory,
+        RegenerateHelper                         $helper,
+        ResourceConnection                       $resourceConnection,
+        CategoryCollectionFactory                $categoryCollectionFactory,
+        DatabaseMapPool\Proxy                    $databaseMapPool,
+        CategoryUrlPathGeneratorFactory\Proxy    $categoryUrlPathGeneratorFactory,
         CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory,
-        UrlRewriteHandlerFactory\Proxy $urlRewriteHandlerFactory,
-        RegenerateProductRewrites $regenerateProductRewrites
+        UrlRewriteHandlerFactory\Proxy           $urlRewriteHandlerFactory,
+        RegenerateProductRewrites                $regenerateProductRewrites
     )
     {
         parent::__construct($helper, $resourceConnection);
@@ -115,10 +124,12 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     }
 
     /**
-     * Regenerate Categories and childs (sub-categories and related products) Url Rewrites  in specific store
+     * Regenerate Categories and children (subcategories and related products) Url Rewrites in specific store
+     *
+     * @param int $storeId
      * @return $this
      */
-    public function regenerate($storeId = 0)
+    public function regenerate(int $storeId = 0): static
     {
         if (count($this->regenerateOptions['categoriesFilter']) > 0) {
             $this->regenerateCategoriesRangeUrlRewrites(
@@ -138,10 +149,11 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 
     /**
      * Regenerate Url Rewrites of all categories
+     *
      * @param int $storeId
      * @return $this
      */
-    public function regenerateAllCategoriesUrlRewrites($storeId = 0)
+    public function regenerateAllCategoriesUrlRewrites(int $storeId = 0): static
     {
         $this->regenerateCategoriesRangeUrlRewrites([], $storeId);
 
@@ -150,11 +162,12 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 
     /**
      * Regenerate Url Rewrites of specific category
+     *
      * @param int $categoryId
      * @param int $storeId
      * @return $this
      */
-    public function regenerateSpecificCategoryUrlRewrites($categoryId, $storeId = 0)
+    public function regenerateSpecificCategoryUrlRewrites(int $categoryId, int $storeId = 0): static
     {
         $this->regenerateCategoriesRangeUrlRewrites([$categoryId], $storeId);
 
@@ -162,45 +175,51 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     }
 
     /**
-     * Regenerate Url Rewrites of a categories range
+     * Regenerate Url Rewrites of a category range
+     *
      * @param array $categoriesFilter
      * @param int $storeId
      * @return $this
      */
-    public function regenerateCategoriesRangeUrlRewrites($categoriesFilter = [], $storeId = 0)
+    public function regenerateCategoriesRangeUrlRewrites(array $categoriesFilter = [], int $storeId = 0): static
     {
-        $categories = $this->_getCategoriesCollection($categoriesFilter, $storeId);
+        try {
+            $categories = $this->_getCategoriesCollection($categoriesFilter, $storeId);
 
-        $pageCount = $categories->getLastPageNumber();
-        $this->progressBarProgress = 0;
-        $this->progressBarTotal = (int)$categories->getSize();
-        $currentPage = 1;
+            $pageCount = $categories->getLastPageNumber();
+            $this->progressBarProgress = 0;
+            $this->progressBarTotal = (int)$categories->getSize();
+            $currentPage = 1;
 
-        $this->_showProgress();
-        while ($currentPage <= $pageCount) {
-            $categories->clear();
-            $categories->setCurPage($currentPage);
+            $this->_showProgress();
+            while ($currentPage <= $pageCount) {
+                $categories->clear();
+                $categories->setCurPage($currentPage);
 
-            foreach ($categories as $category) {
-                $this->categoryProcess($category, $storeId);
-                $this->_showProgress();
+                foreach ($categories as $category) {
+                    $this->categoryProcess($category, $storeId);
+                    $this->_showProgress();
+                }
+
+                $currentPage++;
             }
 
-            $currentPage++;
+            $this->_updateSecondaryTable();
+        } catch (LocalizedException $e) {
+            // skip it
         }
-
-        $this->_updateSecondaryTable();
 
         return $this;
     }
 
     /**
      * Process category Url Rewrites re-generation
+     *
      * @param $category
      * @param int $storeId
      * @return $this
      */
-    protected function categoryProcess($category, $storeId = 0)
+    protected function categoryProcess($category, int $storeId = 0): static
     {
         $category->setStoreId($storeId);
 
@@ -213,18 +232,30 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $category->setUrlKey($this->_getCategoryUrlPathGenerator()->getUrlKey($category->setUrlKey(null)));
             $category->getResource()->saveAttribute($category, 'url_key');
         }
-        
-        $category->unsUrlPath();
-        $category->setUrlPath($this->_getCategoryUrlPathGenerator()->getUrlPath($category));
-        $category->getResource()->saveAttribute($category, 'url_path');
+
+        try {
+            $urlPath = $this->_getCategoryUrlPathGenerator()->getUrlPath($category);
+        } catch (LocalizedException $e) {
+            $urlPath = null;
+        }
+        if (!empty($urlPath)) {
+            $category->unsUrlPath();
+            $category->setUrlPath($urlPath);
+            $category->getResource()->saveAttribute($category, 'url_path');
+        }
 
         $category->setChangedProductIds(true);
-        $categoryUrlRewriteResult = $this->_getCategoryUrlRewriteGenerator()->generate($category, true);
+
+        try {
+            $categoryUrlRewriteResult = $this->_getCategoryUrlRewriteGenerator()->generate($category, true);
+        } catch (\Exception $e) {
+            $categoryUrlRewriteResult = null;
+        }
         if (!empty($categoryUrlRewriteResult)) {
             $this->saveUrlRewrites($categoryUrlRewriteResult);
         }
 
-        // if config option "Use Categories Path for Product URLs" is "Yes" then regenerate product urls
+        // if config option "Use Category Path for Product URLs" is "Yes" then regenerate product urls
         if ($this->helper->useCategoriesPathForProductUrls($storeId)) {
             $productsIds = $this->_getCategoriesProductsIds($category->getAllChildren());
             if (!empty($productsIds)) {
@@ -244,21 +275,23 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 
     /**
      * Get categories collection
+     *
      * @param array $categoriesFilter
      * @param int $storeId
-     * @return mixed
+     * @return Collection
+     * @throws LocalizedException
      */
-    protected function _getCategoriesCollection($categoriesFilter = [], $storeId = 0)
+    protected function _getCategoriesCollection(array $categoriesFilter = [], int $storeId = 0): Collection
     {
         $categoriesCollection = $this->categoryCollectionFactory->create();
         $categoriesCollection->addAttributeToSelect('name')
             ->addAttributeToSelect('url_key')
             ->addAttributeToSelect('url_path')
-            // if we need to regenerate Url Rewrites for all categories then we select only top level
-            // and all sub-categories (and products) will be regenerated as child's
+            // if we need to regenerate Url Rewrites for all categories, then we select only top level
+            // and all subcategories (and products) will be regenerated as children
             ->addFieldToFilter('level', (count($categoriesFilter) > 0 ? ['gt' => '1'] : 2))
             ->setOrder('level', 'ASC')
-            // use limit to avoid a "eating" of a memory
+            // use limit to avoid an "eating" of a memory
             ->setPageSize($this->categoriesCollectionPageSize);
 
         $rootCategoryId = $this->_getStoreRootCategoryId($storeId);
@@ -275,11 +308,12 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     }
 
     /**
-     * Get products Ids which are related to specific categories
+     * Get product Ids which are related to specific categories
+     *
      * @param string $categoryIds
      * @return array
      */
-    protected function _getCategoriesProductsIds($categoryIds = '')
+    protected function _getCategoriesProductsIds(string $categoryIds = ''): array
     {
         $result = [];
 
@@ -287,7 +321,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $select = $this->_getResourceConnection()->getConnection()->select()
                 ->from($this->_getCategoryProductsTableName(), ['product_id'])
                 ->where("category_id IN ({$categoryIds})");
-            $rows =  $this->_getResourceConnection()->getConnection()->fetchAll($select);
+            $rows = $this->_getResourceConnection()->getConnection()->fetchAll($select);
 
             foreach ($rows as $row) {
                 $result[] = $row['product_id'];
@@ -299,9 +333,10 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 
     /**
      * Get category Url Path generator
-     * @return mixed
+     *
+     * @return CategoryUrlPathGenerator
      */
-    protected function _getCategoryUrlPathGenerator()
+    protected function _getCategoryUrlPathGenerator(): CategoryUrlPathGenerator
     {
         if (is_null($this->categoryUrlPathGenerator)) {
             $this->categoryUrlPathGenerator = $this->categoryUrlPathGeneratorFactory->create();
@@ -312,9 +347,10 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 
     /**
      * Get category Url Rewrite generator
-     * @return mixed
+     *
+     * @return CategoryUrlRewriteGenerator
      */
-    protected function _getCategoryUrlRewriteGenerator()
+    protected function _getCategoryUrlRewriteGenerator(): CategoryUrlRewriteGenerator
     {
         if (is_null($this->categoryUrlRewriteGenerator)) {
             $this->categoryUrlRewriteGenerator = $this->categoryUrlRewriteGeneratorFactory->create();
@@ -325,9 +361,10 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 
     /**
      * Get Url Rewrite handler
-     * @return mixed
+     *
+     * @return UrlRewriteHandler
      */
-    protected function _getUrlRewriteHandler()
+    protected function _getUrlRewriteHandler(): UrlRewriteHandler
     {
         if (is_null($this->urlRewriteHandler)) {
             $this->urlRewriteHandler = $this->urlRewriteHandlerFactory->create();
@@ -342,7 +379,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
      * @param $category
      * @return void
      */
-    protected function _resetUrlRewritesDataMaps($category)
+    protected function _resetUrlRewritesDataMaps($category): void
     {
         foreach ($this->dataUrlRewriteClassNames as $className) {
             $this->databaseMapPool->resetMap($className, $category->getEntityId());

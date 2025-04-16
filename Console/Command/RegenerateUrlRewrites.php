@@ -1,6 +1,6 @@
 <?php
 /**
- * Regenerate Url rewrites
+ * Regenerate Url Rewrites
  *
  * @package OlegKoval_RegenerateUrlRewrites
  * @author Oleg Koval <olegkoval.ca@gmail.com>
@@ -10,6 +10,7 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
 
+use Magento\Framework\Exception\LocalizedException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -19,37 +20,25 @@ use Symfony\Component\Console\Output\OutputInterface;
 class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 {
     /**
-     * Code of success command action.
-     * Code was added because old version of Symfony Command do not have this constant.
+     * @var null|InputInterface
      */
-    const SUCCESS = 0;
+    protected ?InputInterface $_input = null;
 
     /**
-     * Code of fail command action
-     * Code was added because old version of Symfony Command do not have this constant.
+     * @var null|OutputInterface
      */
-    const FAILURE = 1;
+    protected ?OutputInterface $_output = null;
 
     /**
-     * @var null|Symfony\Component\Console\Input\InputInterface
+     * @return void
      */
-    protected $_input = null;
-
-    /**
-     * @var null|Symfony\Component\Console\Output\OutputInterface
-     */
-    protected $_output = null;
-
-    /**
-     * {@inheritdoc}
-     */
-    protected function configure()
+    protected function configure(): void
     {
         $this->setName('ok:urlrewrites:regenerate')
-            ->setDescription('Regenerate Url rewrites of products and categories')
+            ->setDescription('Regenerate Url Rewrites of products and categories')
             ->setDefinition([
                 new InputOption(
-                    self::INPUT_KEY_STOREID,
+                    self::INPUT_KEY_STORE_ID,
                     null,
                     InputArgument::OPTIONAL,
                     'Specific store id'
@@ -125,11 +114,11 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 
     /**
      * Regenerate Url Rewrites
-     * @param  InputInterface  $input
-     * @param  OutputInterface $output
+     * @param InputInterface $input
+     * @param OutputInterface $output
      * @return int 0 if everything went fine, or an exit code
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         set_time_limit(0);
         $this->_input = $input;
@@ -143,15 +132,17 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             foreach ($this->_errors as $error) {
                 $this->_addConsoleMsg($error);
             }
-            return  self::FAILURE;
+            return  Command::FAILURE;
         }
 
         // set area code if needed
         try {
             $areaCode = $this->_appState->getAreaCode();
-        } catch (\Magento\Framework\Exception\LocalizedException $e) {
+        } catch (LocalizedException $e) {
             // if area code is not set then magento generate exception "LocalizedException"
-            $this->_appState->setAreaCode('adminhtml');
+            try {
+                $this->_appState->setAreaCode('adminhtml');
+            } catch (LocalizedException $e) {}
         }
 
         foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
@@ -179,14 +170,14 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         $this->_showSupportMe();
         $this->_output->writeln('Finished');
 
-        return self::SUCCESS;
+        return Command::SUCCESS;
     }
 
     /**
      * Get command options
      * @return void
      */
-    public function getCommandOptions()
+    public function getCommandOptions(): void
     {
         $options = $this->_input->getOptions();
         $allStores = $this->_getAllStoreIds();
@@ -227,6 +218,10 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         }
 
         if (isset($options[self::INPUT_KEY_PRODUCTS_RANGE])) {
+            if (!$this->helper->isRegisteredProVersion()) {
+                $this->_addError($this->helper->getPurchaseProVersionMsg());
+            }
+
             $this->_commandOptions['productsFilter'] = $this->_generateIdsRangeArray(
                 $options[self::INPUT_KEY_PRODUCTS_RANGE],
                 'product'
@@ -235,6 +230,10 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         }
 
         if (isset($options[self::INPUT_KEY_PRODUCT_ID])) {
+            if (!$this->helper->isRegisteredProVersion()) {
+                $this->_addError($this->helper->getPurchaseProVersionMsg());
+            }
+
             $this->_commandOptions['productId'] = (int)$options[self::INPUT_KEY_PRODUCT_ID];
 
             if ($this->_commandOptions['productId'] == 0) {
@@ -245,6 +244,10 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         }
 
         if (isset($options[self::INPUT_KEY_CATEGORIES_RANGE])) {
+            if (!$this->helper->isRegisteredProVersion()) {
+                $this->_addError($this->helper->getPurchaseProVersionMsg());
+            }
+
             $this->_commandOptions['categoriesFilter'] = $this->_generateIdsRangeArray(
                 $options[self::INPUT_KEY_CATEGORIES_RANGE],
                 'category'
@@ -256,6 +259,10 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         }
 
         if (isset($options[self::INPUT_KEY_CATEGORY_ID])) {
+            if (!$this->helper->isRegisteredProVersion()) {
+                $this->_addError($this->helper->getPurchaseProVersionMsg());
+            }
+
             $this->_commandOptions['categoryId'] = (int)$options[self::INPUT_KEY_CATEGORY_ID];
 
             if ($this->_commandOptions['categoryId'] == 0) {
@@ -308,8 +315,8 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             );
         }
 
-        // get store Id (if was set)
-        $storeId = $this->_input->getOption(self::INPUT_KEY_STOREID);
+        // get store ID (if was set)
+        $storeId = $this->_input->getOption(self::INPUT_KEY_STORE_ID);
 
         // if store ID is not specified the re-generate for all stores
         if (is_null($storeId)) {
@@ -319,26 +326,27 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         elseif (strlen($storeId) && ctype_digit($storeId)) {
             if (isset($allStores[$storeId])) {
                 $this->_commandOptions['storesList'] = array(
-                    $storeId => $allStores[$storeId]
+                    (int)$storeId => $allStores[$storeId]
                 );
             } else {
-                $this->_errors[] = __('ERROR: store with this ID not exists.');
+                $this->_errors[] = __('ERROR: store with this ID not exists.')->render();
             }
         }
-        // disaply error if user set some incorrect value
+        // display error if user set some incorrect value
         else {
-            $this->_errors[] = __('ERROR: store ID should have a integer value.');
+            $this->_errors[] = __('ERROR: store ID should have a integer value.')->render();
         }
     }
 
     /**
      * Generate logical conflict error
-     * @param  string $option1
-     * @param  string $option2
-     * @param  string $option3
+     *
+     * @param string $option1
+     * @param string $option2
+     * @param string $option3
      * @return string
      */
-    private function _getLogicalConflictError($option1, $option2, $option3)
+    private function _getLogicalConflictError(string $option1, string $option2, string $option3): string
     {
         return __(
                 "ERROR: you can not use this options together (logical conflict):\n'--%o1' with '--%o2'/'--%o3'",
@@ -347,6 +355,6 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     'o2' => $option2,
                     'o3' => $option3
                 ]
-            );
+            )->render();
     }
 }

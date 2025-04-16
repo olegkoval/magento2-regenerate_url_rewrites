@@ -69,11 +69,13 @@ abstract class AbstractRegenerateRewrites
     protected $resourceConnection;
 
     /**
-     * RegenerateAbstract constructor.
+     * RegenerateAbstract constructor
+     *
      * @param RegenerateHelper $helper
+     * @param ResourceConnection $resourceConnection
      */
     public function __construct(
-        RegenerateHelper $helper,
+        RegenerateHelper   $helper,
         ResourceConnection $resourceConnection
     )
     {
@@ -96,24 +98,25 @@ abstract class AbstractRegenerateRewrites
      * @param int $storeId
      * @return mixed
      */
-    abstract function regenerate($storeId = 0);
+    abstract function regenerate(int $storeId = 0);
 
     /**
      * Return resource connection
      * @return ResourceConnection
      */
-    protected function _getResourceConnection()
+    protected function _getResourceConnection(): ResourceConnection
     {
         return $this->resourceConnection;
     }
 
     /**
      * Save Url Rewrites
+     *
      * @param array $urlRewrites
      * @param array $entityData
      * @return $this
      */
-    public function saveUrlRewrites($urlRewrites, $entityData = [])
+    public function saveUrlRewrites(array $urlRewrites, array $entityData = []): static
     {
         $data = $this->_prepareUrlRewrites($urlRewrites);
 
@@ -135,7 +138,6 @@ abstract class AbstractRegenerateRewrites
 
         } catch (\Exception $e) {
             $this->_getResourceConnection()->getConnection()->rollBack();
-            throw $e;
         }
 
         return $this;
@@ -143,9 +145,10 @@ abstract class AbstractRegenerateRewrites
 
     /**
      * Show a progress bar in the console
+     *
      * @param int $size
      */
-    protected function _showProgress($size = 70)
+    protected function _showProgress(int $size = 70): void
     {
         if (!$this->regenerateOptions['showProgress']) {
             return;
@@ -184,7 +187,7 @@ abstract class AbstractRegenerateRewrites
     /**
      * @return string
      */
-    protected function _getMainTableName()
+    protected function _getMainTableName(): string
     {
         if (empty($this->mainDbTable)) {
             $this->mainDbTable = $this->_getResourceConnection()->getTableName(DbStorage::TABLE_NAME);
@@ -196,7 +199,7 @@ abstract class AbstractRegenerateRewrites
     /**
      * @return string
      */
-    protected function _getSecondaryTableName()
+    protected function _getSecondaryTableName(): string
     {
         if (empty($this->secondaryDbTable)) {
             $this->secondaryDbTable = $this->_getResourceConnection()->getTableName(ProductUrlRewriteResource::TABLE_NAME);
@@ -208,7 +211,7 @@ abstract class AbstractRegenerateRewrites
     /**
      * @return string
      */
-    protected function _getCategoryProductsTableName()
+    protected function _getCategoryProductsTableName(): string
     {
         if (empty($this->categoryProductsDbTable)) {
             $this->categoryProductsDbTable = $this->_getResourceConnection()->getTableName('catalog_category_product');
@@ -219,10 +222,11 @@ abstract class AbstractRegenerateRewrites
 
     /**
      * Delete current Url Rewrites
+     *
      * @param array $entitiesData
      * @return $this
      */
-    protected function _deleteCurrentRewrites($entitiesData = [])
+    protected function _deleteCurrentRewrites(array $entitiesData = []): static
     {
         if (!empty($entitiesData)) {
             $whereConditions = [];
@@ -244,7 +248,6 @@ abstract class AbstractRegenerateRewrites
 
             } catch (\Exception $e) {
                 $this->_getResourceConnection()->getConnection()->rollBack();
-                throw $e;
             }
         }
 
@@ -253,9 +256,10 @@ abstract class AbstractRegenerateRewrites
 
     /**
      * Update "catalog_url_rewrite_product_category" table
+     *
      * @return $this
      */
-    protected function _updateSecondaryTable()
+    protected function _updateSecondaryTable(): static
     {
         $this->_getResourceConnection()->getConnection()->beginTransaction();
         try {
@@ -275,9 +279,9 @@ abstract class AbstractRegenerateRewrites
                 [
                     'url_rewrite_id',
                     'category_id' => new \Zend_Db_Expr(
-                        'SUBSTRING_INDEX(SUBSTRING_INDEX('.$this->_getMainTableName().'.metadata, \'"\', -2), \'"\', 1)'
+                        'SUBSTRING_INDEX(SUBSTRING_INDEX(' . $this->_getMainTableName() . '.metadata, \'"\', -2), \'"\', 1)'
                     ),
-                    'product_id' =>'entity_id'
+                    'product_id' => 'entity_id'
                 ]
             )
             ->where('metadata LIKE \'{"category_id":"%"}\'')
@@ -286,9 +290,9 @@ abstract class AbstractRegenerateRewrites
 
         if (!empty($data)) {
             // I'm using row-by-row inserts because some products/categories not exists in entity tables but Url Rewrites
-            // for this entities still exists in url_rewrite DB table.
-            // This is the issue of Magento EE (Data integrity/assurance of the accuracy and consistency of data)
-            // and this extension was made to not fix this, I just avoid this issue
+            // for this entity still exists in url_rewrite DB table.
+            // This is the issue of Magento EE (Data integrity/assurance of the accuracy and consistency of data),
+            // and this extension was made to not fix this; I just avoid this issue
             foreach ($data as $row) {
                 $this->_getResourceConnection()->getConnection()->beginTransaction();
                 try {
@@ -312,13 +316,13 @@ abstract class AbstractRegenerateRewrites
      * @param array $urlRewrites
      * @return array
      */
-    protected function _prepareUrlRewrites($urlRewrites)
+    protected function _prepareUrlRewrites(array $urlRewrites): array
     {
         $result = [];
         foreach ($urlRewrites as $urlRewrite) {
             $rewrite = $urlRewrite->toArray();
 
-            // check if same Url Rewrite already exists
+            // check if the same Url Rewrite already exists
             $originalRequestPath = trim($rewrite['request_path']);
 
             // skip empty Url Rewrites - I don't know how this possible, but it happens in Magento:
@@ -338,7 +342,7 @@ abstract class AbstractRegenerateRewrites
             // re-set Url Rewrite with sanitized parts
             $rewrite['request_path'] = $this->_mergePartsIntoRewriteRequest($pathParts, '', $urlSuffix);
 
-            // check if we have a duplicate (maybe exists product with same name => same Url Rewrite)
+            // check if we have a duplicate (maybe exists product with the same name => same Url Rewrite)
             // if exists then add additional index to avoid a duplicates
             $index = 0;
             while ($this->_urlRewriteExists($rewrite)) {
@@ -353,11 +357,12 @@ abstract class AbstractRegenerateRewrites
     }
 
     /**
-     * Check if Url Rewrite with same request path exists
+     * Check if Url Rewrite with the same request path exists
+     *
      * @param array $rewrite
-     * @return bool
+     * @return string
      */
-    protected function _urlRewriteExists($rewrite)
+    protected function _urlRewriteExists(array $rewrite): string
     {
         $select = $this->_getResourceConnection()->getConnection()->select()
             ->from($this->_getMainTableName(), ['url_rewrite_id'])
@@ -370,34 +375,39 @@ abstract class AbstractRegenerateRewrites
 
     /**
      * Merge Url Rewrite parts into one string
-     * @param $pathParts
+     *
+     * @param array $pathParts
      * @param string $index
      * @param string $urlSuffix
      * @return string
      */
-    protected function _mergePartsIntoRewriteRequest($pathParts, $index = '', $urlSuffix = '')
+    protected function _mergePartsIntoRewriteRequest(array $pathParts, string $index = '', string $urlSuffix = ''): string
     {
-        $result = (!empty($pathParts['dirname']) ? $pathParts['dirname'] . '/' : '') . $pathParts['filename']
+        return (!empty($pathParts['dirname']) ? $pathParts['dirname'] . '/' : '') . $pathParts['filename']
             . (!empty($index) ? '-' . $index : '')
             . (!empty($pathParts['extension']) ? '.' . $pathParts['extension'] : '')
             . ($urlSuffix ?: '');
-
-        return $result;
     }
 
     /**
-     * Get root category Id of specific store
+     * Get root category I'd of specific store
+     *
      * @param $storeId
-     * @return mixed
+     * @return int|null
      */
-    protected function _getStoreRootCategoryId($storeId)
+    protected function _getStoreRootCategoryId($storeId): ?int
     {
         if (empty($this->storeRootCategoryId[$storeId])) {
-            $this->storeRootCategoryId[$storeId] = null;
-            $store = $this->helper->getStoreManager()->getStore($storeId);
-            if ($store) {
-                $this->storeRootCategoryId[$storeId] = $store->getRootCategoryId();
+            $value = null;
+            try {
+                $store = $this->helper->getStoreManager()->getStore($storeId);
+                if ($store) {
+                    $value = $store->getRootCategoryId();
+                }
+            } catch (\Exception $e) {
             }
+
+            $this->storeRootCategoryId[$storeId] = $value;
         }
 
         return $this->storeRootCategoryId[$storeId];

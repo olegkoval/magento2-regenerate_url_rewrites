@@ -1,6 +1,6 @@
 <?php
 /**
- * Regenerate Url rewrites abstract class
+ * Regenerate Url Rewrites abstract class
  *
  * @package OlegKoval_RegenerateUrlRewrites
  * @author Oleg Koval <olegkoval.ca@gmail.com>
@@ -10,11 +10,8 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
 
+use Magento\Framework\Phrase;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\App\State as AppState;
 use Magento\Store\Model\StoreManagerInterface;
@@ -24,33 +21,33 @@ use OlegKoval\RegenerateUrlRewrites\Model\RegenerateCategoryRewrites;
 
 abstract class RegenerateUrlRewritesAbstract extends Command
 {
-    const INPUT_KEY_STOREID                              = 'store-id';
-    const INPUT_KEY_REGENERATE_ENTITY_TYPE               = 'entity-type';
-    const INPUT_KEY_SAVE_REWRITES_HISTORY                = 'save-old-urls';
-    const INPUT_KEY_NO_REGEN_URL_KEY                     = 'no-regen-url-key';
-    const INPUT_KEY_NO_REINDEX                           = 'no-reindex';
-    const INPUT_KEY_NO_PROGRESS                          = 'no-progress';
-    const INPUT_KEY_NO_CACHE_FLUSH                       = 'no-cache-flush';
-    const INPUT_KEY_NO_CACHE_CLEAN                       = 'no-cache-clean';
-    const INPUT_KEY_CATEGORIES_RANGE                     = 'categories-range';
-    const INPUT_KEY_PRODUCTS_RANGE                       = 'products-range';
-    const INPUT_KEY_CATEGORY_ID                          = 'category-id';
-    const INPUT_KEY_PRODUCT_ID                           = 'product-id';
-    const INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT       = 'product';
-    const INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY      = 'category';
+    const INPUT_KEY_STORE_ID = 'store-id';
+    const INPUT_KEY_REGENERATE_ENTITY_TYPE = 'entity-type';
+    const INPUT_KEY_SAVE_REWRITES_HISTORY = 'save-old-urls';
+    const INPUT_KEY_NO_REGEN_URL_KEY = 'no-regen-url-key';
+    const INPUT_KEY_NO_REINDEX = 'no-reindex';
+    const INPUT_KEY_NO_PROGRESS = 'no-progress';
+    const INPUT_KEY_NO_CACHE_FLUSH = 'no-cache-flush';
+    const INPUT_KEY_NO_CACHE_CLEAN = 'no-cache-clean';
+    const INPUT_KEY_CATEGORIES_RANGE = 'categories-range';
+    const INPUT_KEY_PRODUCTS_RANGE = 'products-range';
+    const INPUT_KEY_CATEGORY_ID = 'category-id';
+    const INPUT_KEY_PRODUCT_ID = 'product-id';
+    const INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT = 'product';
+    const INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY = 'category';
 
     /**
-     * @var \Magento\Framework\App\ResourceConnection
+     * @var ResourceConnection
      */
     protected $_resource;
 
     /**
-     * @var \Magento\Framework\App\State $appState
+     * @var AppState $appState
      */
     protected $_appState;
 
     /**
-     * @var \Magento\Store\Model\StoreManagerInterface
+     * @var StoreManagerInterface
      */
     protected $_storeManager;
 
@@ -85,7 +82,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_consoleMsg = [];
 
     /**
-     * RegenerateUrlRewritesAbstract constructor.
+     * RegenerateUrlRewritesAbstract constructor
+     *
      * @param ResourceConnection $resource
      * @param AppState\Proxy $appState
      * @param StoreManagerInterface $storeManager
@@ -94,13 +92,14 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @param RegenerateProductRewrites $regenerateProductRewrites
      */
     public function __construct(
-        ResourceConnection $resource,
-        AppState\Proxy $appState,
-        StoreManagerInterface $storeManager,
-        RegenerateHelper $helper,
+        ResourceConnection         $resource,
+        AppState\Proxy             $appState,
+        StoreManagerInterface      $storeManager,
+        RegenerateHelper           $helper,
         RegenerateCategoryRewrites $regenerateCategoryRewrites,
-        RegenerateProductRewrites $regenerateProductRewrites
-    ) {
+        RegenerateProductRewrites  $regenerateProductRewrites
+    )
+    {
         parent::__construct();
 
         $this->_resource = $resource;
@@ -127,9 +126,10 @@ abstract class RegenerateUrlRewritesAbstract extends Command
 
     /**
      * Display a support/donate information
+     *
      * @return void
      */
-    protected function _showSupportMe()
+    protected function _showSupportMe(): void
     {
         $text = $this->helper->getSupportMeText();
 
@@ -143,11 +143,12 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     }
 
     /**
-     * Get list of all stores id/code
+     * Get a list of all stores id/code
      *
      * @return array
      */
-    protected function _getAllStoreIds() {
+    protected function _getAllStoreIds(): array
+    {
         $result = [];
 
         $sql = $this->_resource->getConnection()->select()
@@ -165,11 +166,12 @@ abstract class RegenerateUrlRewritesAbstract extends Command
 
     /**
      * Generate range of ID's
-     * @param  string $idsRange
-     * @param  string $type
+     *
+     * @param string $idsRange
+     * @param string $type
      * @return array
      */
-    protected function _generateIdsRangeArray($idsRange, $type = 'product')
+    protected function _generateIdsRangeArray(string $idsRange, string $type = 'product'): array
     {
         $result = $tmpIds = [];
 
@@ -181,8 +183,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
             $tmpIds[] = $id;
         }
 
-        // get existed Id's from this range in entity DB table
-        $tableName = $this->_resource->getTableName('catalog_'. $type .'_entity');
+        // get existed ID's from this range in entity DB table
+        $tableName = $this->_resource->getTableName('catalog_' . $type . '_entity');
         $ids = implode(', ', $tmpIds);
         $sql = "SELECT entity_id FROM {$tableName} WHERE entity_id IN ({$ids}) ORDER BY entity_id";
 
@@ -194,20 +196,30 @@ abstract class RegenerateUrlRewritesAbstract extends Command
 
         // if not entity_id in this range - show error
         if (count($result) == 0) {
-            $this->_errors[] = __("ERROR: %type ID's in this range not exists", ['type' => ucfirst($type)]);
+            $this->_addError(__("ERROR: %type ID's in this range not exists", ['type' => ucfirst($type)]));
         }
 
         return $result;
     }
 
     /**
-     * Collect console messages
-     * @param mixed $msg
+     * @param Phrase|string $error
      * @return void
      */
-    protected function _addConsoleMsg($msg)
+    protected function _addError(Phrase|string $error): void
     {
-        if ($msg instanceof \Magento\Framework\Phrase) {
+        $this->_errors[] = $error;
+    }
+
+    /**
+     * Collect console messages
+     *
+     * @param Phrase|string $msg
+     * @return void
+     */
+    protected function _addConsoleMsg(Phrase|string $msg): void
+    {
+        if ($msg instanceof Phrase) {
             $msg = $msg->render();
         }
 
@@ -216,9 +228,10 @@ abstract class RegenerateUrlRewritesAbstract extends Command
 
     /**
      * Display all console messages
+     *
      * @return void
      */
-    protected function _displayConsoleMsg()
+    protected function _displayConsoleMsg(): void
     {
         if (count($this->_consoleMsg) > 0) {
             $this->_output->writeln('[CONSOLE MESSAGES]');
@@ -232,12 +245,12 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     }
 
     /**
-     * Run reindexation
+     * Run re-indexation
      * @return void
      */
-    protected function _runReindexation()
+    protected function _runReindexation(): void
     {
-        if ($this->_commandOptions['runReindex'] == true) {
+        if ($this->_commandOptions['runReindex']) {
             $this->_output->write('Reindexation...');
             shell_exec('php bin/magento indexer:reindex');
             $this->_output->writeln(' Done');
@@ -246,9 +259,10 @@ abstract class RegenerateUrlRewritesAbstract extends Command
 
     /**
      * Clear cache
+     *
      * @return void
      */
-    protected function _runClearCache()
+    protected function _runClearCache(): void
     {
         if ($this->_commandOptions['runCacheClean'] || $this->_commandOptions['runCacheFlush']) {
             $this->_output->write('Cache refreshing...');

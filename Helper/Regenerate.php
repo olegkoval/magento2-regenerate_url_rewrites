@@ -10,11 +10,12 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Helper;
 
+use Magento\Framework\App\Helper\AbstractHelper;
 use Magento\Framework\App\Helper\Context;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 
-class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
+class Regenerate extends AbstractHelper
 {
     /**
      * @var StoreManagerInterface
@@ -32,7 +33,7 @@ class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
      * @param StoreManagerInterface $storeManager
      */
     public function __construct(
-        Context $context,
+        Context               $context,
         StoreManagerInterface $storeManager
     )
     {
@@ -43,9 +44,10 @@ class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
 
     /**
      * Return array with "support me" text
+     *
      * @return array
      */
-    public function getSupportMeText()
+    public function getSupportMeText(): array
     {
         return [
             'Please, support me on:',
@@ -55,22 +57,40 @@ class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
     }
 
     /**
+     * @return string
+     */
+    public function getPurchaseProVersionMsg(): string
+    {
+        return __('To use this option you should purchase a Pro version.')->render();
+    }
+
+    /**
+     * @return bool
+     */
+    public function isRegisteredProVersion(): bool
+    {
+        return true;
+    }
+
+    /**
      * Get store manager
+     *
      * @return StoreManagerInterface
      */
-    public function getStoreManager()
+    public function getStoreManager(): StoreManagerInterface
     {
         return $this->storeManager;
     }
 
     /**
      * Get config value of "Use Categories Path for Product URLs" config option
-     * @param  mixed $storeId
+     *
+     * @param int|null $storeId
      * @return boolean
      */
-    public function useCategoriesPathForProductUrls($storeId = null)
+    public function useCategoriesPathForProductUrls(int $storeId = null): bool
     {
-        return (bool) $this->scopeConfig->getValue(
+        return (bool)$this->scopeConfig->getValue(
             'catalog/seo/product_use_categories',
             \Magento\Store\Model\ScopeInterface::SCOPE_STORES,
             $storeId
@@ -79,10 +99,11 @@ class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
 
     /**
      * Sanitize product URL rewrites
-     * @param  array $productUrlRewrites
+     *
+     * @param array $productUrlRewrites
      * @return array
      */
-    public function sanitizeProductUrlRewrites($productUrlRewrites)
+    public function sanitizeProductUrlRewrites(array $productUrlRewrites): array
     {
         $paths = [];
         foreach ($productUrlRewrites as $key => $urlRewrite) {
@@ -100,10 +121,10 @@ class Regenerate extends \Magento\Framework\App\Helper\AbstractHelper
 
     /**
      * Clear request path
-     * @param  string $requestPath
+     * @param string $requestPath
      * @return string
      */
-    protected function _clearRequestPath($requestPath)
+    protected function _clearRequestPath(string $requestPath): string
     {
         return str_replace(['//', './'], ['/', '/'], ltrim(ltrim($requestPath, '/'), '.'));
     }

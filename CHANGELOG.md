@@ -1,8 +1,12 @@
-# "Regenerate Url rewrites" Change Log
+# "Regenerate Url Rewrites" Change Log
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
+
+## [1.7.0] - 2025-04-15
+### Changed
+- adapted for compatibility with Magento 2.4.7-p4
 
 ## [1.6.2] - 2023-10-10
 ### Changed
@@ -51,7 +55,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ## [1.5.0] - 2020-02-26
 ### Changed
 - revised and restructured code
-- modified functional-logic of extension
+- modified functional logic of extension
 - removed option "--check-use-category-in-product-url"
 
 ## [1.4.3] - 2019-05-12
@@ -68,14 +72,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Changed
 - fixed logical issues in url_key regeneration
-- fix for category/products rewrites for multistore
+- a fix for category/products rewrites for multistore
 - fixed issue of division by zero in progress bar
-- updated the url_key regeneration behavior to use UrlPathGenerators
-- modified logic of displaying a console messages (notifications, errors, exceptions...)
+- update the url_key regeneration behavior to use UrlPathGenerators
+- modified logic of displaying console messages (notifications, errors, exceptions...)
 
 ## [1.4.1] - 2019-02-20
 ### Changed
-- fixed issue of removing previously added URL rewrites of product when same URL key exists;
+- fixed the issue of removing previously added URL rewrites of product when the same URL key exists;
 - modified progress bar
 
 ## [1.4.0] - 2019-02-11
@@ -108,7 +112,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Changed
 - optimized code
 - modified logic of url rewrites regeneration
-- fixed issue of store filter in categories collection
+- fixed issue of store filter in a category collection
 
 ## [1.2.3] - 2018-10-03
 ### Added
@@ -156,7 +160,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - new option to save current URL rewrites
 
 ### Changed
-- improve a store ID arguments workflow
+- improve the store ID arguments workflow
 
 ## [1.0.4] - 2017-11-13
 ### Added
@@ -164,7 +168,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [1.0.3] - 2017-10-25
 ### Added
-- checks if area code is set
+- check if area code is set
 
 ## [1.0.2] - 2017-10-20
 ### Fixed
@@ -175,4 +179,4 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - fix store id issue in collection filter
 
 ## [1.0.0] - 2017-09-29
-Release of Magento 2 "Regenerate Url rewrites" extension
+Release of Magento 2 "Regenerate Url Rewrites" extension
