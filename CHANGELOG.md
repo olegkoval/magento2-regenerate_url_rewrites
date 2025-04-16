@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ## [1.7.0] - 2025-04-15
 ### Changed
 - adapted for compatibility with Magento 2.4.7-p4
+- adapted the composer.json file to be compatible with Composer 2
 
 ## [1.6.2] - 2023-10-10
 ### Changed
