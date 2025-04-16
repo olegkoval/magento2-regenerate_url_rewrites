@@ -287,6 +287,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         $categoriesCollection->addAttributeToSelect('name')
             ->addAttributeToSelect('url_key')
             ->addAttributeToSelect('url_path')
+            ->setStoreId($storeId)
             // if we need to regenerate Url Rewrites for all categories, then we select only top level
             // and all subcategories (and products) will be regenerated as children
             ->addFieldToFilter('level', (count($categoriesFilter) > 0 ? ['gt' => '1'] : 2))
