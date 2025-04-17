@@ -83,25 +83,25 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     self::INPUT_KEY_CATEGORIES_RANGE,
                     null,
                     InputArgument::OPTIONAL,
-                    'Categories ID range, e.g.: 15-40 (Pro version only)'
+                    'Categories ID range, e.g.: 15-40'
                 ),
                 new InputOption(
                     self::INPUT_KEY_PRODUCTS_RANGE,
                     null,
                     InputArgument::OPTIONAL,
-                    'Products ID range, e.g.: 101-152 (Pro version only)'
+                    'Products ID range, e.g.: 101-152'
                 ),
                 new InputOption(
                     self::INPUT_KEY_CATEGORY_ID,
                     null,
                     InputArgument::OPTIONAL,
-                    'Specific category ID, e.g.: 123 (Pro version only)'
+                    'Specific category ID, e.g.: 123'
                 ),
                 new InputOption(
                     self::INPUT_KEY_PRODUCT_ID,
                     null,
                     InputArgument::OPTIONAL,
-                    'Specific product ID, e.g.: 107 (Pro version only)'
+                    'Specific product ID, e.g.: 107'
                 ),
                 new InputOption(
                     self::INPUT_KEY_NO_REGEN_URL_KEY,

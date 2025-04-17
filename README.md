@@ -1,6 +1,6 @@
 “Regenerate Url Rewrites” extension
 =====================
-Magento 2 "Regenerate Url Rewrites" extension add a CLI feature which allow to regenerate a Url rewrites of products/categories in all stores or specific store.
+Magento 2 "Regenerate Url Rewrites" extension add a CLI feature which allow regenerating a Url rewrites of products/categories in all stores or specific store.
 Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrites
 
 ## CONTACTS
@@ -8,7 +8,7 @@ Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrite
 * LinkedIn: https://www.linkedin.com/in/oleg-koval-85bb2314/
 
 ## DONATIONS / SUPPORT ME ON
-* [PayPal](https://www.paypal.me/olegkoval77)
+* [PayPal](https://www.paypal.com/donate/?hosted_button_id=995MLRKBNY9QQ)
 * [Patreon](https://www.patreon.com/olegkoval)
 
 ## INSTALLATION
@@ -38,13 +38,13 @@ Extension homepage: https://github.com/olegkoval/magento2-regenerate_url_rewrite
 * to regenerate Url Rewrites of all products in all stores (only products) set entity type to "product":
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=product`
 
-because `product` entity type is default - you can skip it:
+because `product` entity type is default — you can skip it:
 >`$> php bin/magento ok:urlrewrites:regenerate`
 
-* to regenerate Url Rewrites in the specific store view (e.g.: store view id is "2") use option `--store-id`:
+* to regenerate, Url Rewrites in the specific store view (e.g.: store view id is "2") use option `--store-id`:
 >`$> php bin/magento ok:urlrewrites:regenerate --store-id=2`
 
-* to regenerate Url Rewrites of some specific product then use option `product-id` (e.g.: product ID is "122"):
+* to regenerate Url Rewrites of some specific product, then use option `product-id` (e.g.: product ID is "122"):
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=product --product-id=122`
 
 or
@@ -53,7 +53,7 @@ or
 * to regenerate Url Rewrites of specific products range then use option `products-range` (e.g.: regenerate for all products with ID between "101" and "152"):
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=product --products-range=101-152`
 
-\* if in the range you have a gap of ID's (in range 101-152 products with ID's 110, 124, 150 not exists) - do not worry, script handle this.
+\* if in the range you have a gap of ID's (in range 101-152 products with ID's 110, 124, 150 not exists) — do not worry, a script handles this.
 
 or
 >`$> php bin/magento ok:urlrewrites:regenerate --products-range=101-152`
@@ -73,33 +73,33 @@ or
 * if you do not want to run cache:flush at the end of Url Rewrites generation then use option `--no-cache-flush`:
 >`$> php bin/magento ok:urlrewrites:regenerate --no-cache-flush`
 
-* if you do not want to display a progress progress bar in the console then use option `--no-progress`:
+* if you do not want to display a progress bar in the console then use option `--no-progress`:
 >`$> php bin/magento ok:urlrewrites:regenerate --no-progress`
 
 #### REGENERATE URL REWRITES OF CATEGORY
-* to regenerate Url Rewrites of all categories in all stores set entity type to "category":
+* to regenerate Url Rewrites of all categories in all stores, set an entity type to "category":
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=category`
 
-* to regenerate Url Rewrites of some specific category then use option `category-id` (e.g.: category ID is "15"):
+* to regenerate Url Rewrites of some specific category, then use option `category-id` (e.g.: category ID is "15"):
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=category --category-id=15`
 
 * to regenerate Url Rewrites of specific categories range then use option `categories-range` (e.g.: regenerate for all categories with ID between "4" and "12"):
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=category --categories-range=4-12`
 
-\* if in the range you have a gap of ID's (in range 4-12 category with ID "6" not exists) - do not worry, script handle this.
+\* if in the range you have a gap of ID's (in range 4-12 category with ID "6" not exists) — do not worry, a script handles this.
 
 \*\* If you use options `--category-id` or `--categories-range` then you can skip option `--entity-type=category` - extension will understand that you want to use a category entity.
 
 ### YOU CAN COMBINE OPTIONS
 >`$> php bin/magento ok:urlrewrites:regenerate --store-id=2 --save-old-urls --no-regen-url-key --no-reindex`
 
-### YOU CAN NOT COMBINE THIS OPTIONS TOGETHER
+### YOU CANNOT COMBINE THESE OPTIONS
 * `--entity-type=product` and `--category-id`/`--categories-range`
 * `--entity-type=category` and `--product-id`/`--products-range`
 * `--category-id` and/or `--categories-range` and/or `--product-id` and/or `--products-range`
 
 ### DEPRECATED OPTIONS
-* `--check-use-category-in-product-url` - extension use a built-in Magento Url Rewrites generator which check this option in any way.
+* `--check-use-category-in-product-url` — extension uses a built-in Magento Url Rewrites generator which check this option in any way.
 
 ### EXAMPLES OF USAGE
 * Regenerate Url Rewrites for product with ID "38" in store with ID "3":
@@ -121,6 +121,3 @@ Enjoy!
 
 Best regards,
 Oleg Koval
-
--------------
-\* see: http://devdocs.magento.com/guides/v2.0/config-guide/cli/config-cli-subcommands.html

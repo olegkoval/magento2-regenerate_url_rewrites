@@ -51,7 +51,8 @@ class Regenerate extends AbstractHelper
     {
         return [
             'Please, support me on:',
-            'https://www.paypal.me/olegkoval77',
+            'PayPal: olegkoval.ca@gmail.com',
+            'https://www.paypal.com/donate/?hosted_button_id=995MLRKBNY9QQ',
             'https://www.patreon.com/olegkoval',
         ];
     }
