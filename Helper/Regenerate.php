@@ -54,6 +54,7 @@ class Regenerate extends AbstractHelper
             'PayPal: olegkoval.ca@gmail.com',
             'https://www.paypal.com/donate/?hosted_button_id=995MLRKBNY9QQ',
             'https://www.patreon.com/olegkoval',
+            'https://ko-fi.com/olegkoval77',
         ];
     }
 
