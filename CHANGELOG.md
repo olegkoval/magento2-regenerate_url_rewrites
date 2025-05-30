@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.7.1] - 2025-05-30
+### Changed
+- adapted for compatibility with PHP 8.4 (deprecated implicitly nullable types)
+
 ## [1.7.0] - 2025-04-15
 ### Changed
 - adapted for compatibility with Magento 2.4.7-p4
