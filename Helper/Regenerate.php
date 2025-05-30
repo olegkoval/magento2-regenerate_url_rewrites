@@ -90,7 +90,7 @@ class Regenerate extends AbstractHelper
      * @param int|null $storeId
      * @return boolean
      */
-    public function useCategoriesPathForProductUrls(int $storeId = null): bool
+    public function useCategoriesPathForProductUrls(?int $storeId = null): bool
     {
         return (bool)$this->scopeConfig->getValue(
             'catalog/seo/product_use_categories',
