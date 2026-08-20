@@ -140,6 +140,18 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     InputOption::VALUE_NONE,
                     'Append the product\'s SKU as a URL segment in generated product Url Rewrites, e.g. screws.html -> screws-2244000004.html.'
                 ),
+                new InputOption(
+                    self::INPUT_KEY_SET_PRODUCT_SUFFIX,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Set the product URL suffix (e.g. ".html") before regenerating, applied to Default Config and every store (or only --store-id, if given).'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_SET_CATEGORY_SUFFIX,
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Set the category URL suffix (e.g. ".html") before regenerating, applied to Default Config and every store (or only --store-id, if given).'
+                ),
             ]);
     }
 
@@ -175,6 +187,16 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             try {
                 $this->_appState->setAreaCode(Area::AREA_ADMINHTML);
             } catch (LocalizedException $e) {}
+        }
+
+        $this->_setSeoUrlSuffixes();
+
+        if (count($this->_errors) > 0) {
+            foreach ($this->_errors as $error) {
+                $this->_addConsoleMsg($error);
+            }
+            $this->_displayConsoleMsg();
+            return Command::FAILURE;
         }
 
         foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
@@ -261,6 +283,14 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 
         if (isset($options[self::INPUT_KEY_ADD_SKU_TO_URL]) && $options[self::INPUT_KEY_ADD_SKU_TO_URL] === true) {
             $this->_commandOptions['addSkuToUrl'] = true;
+        }
+
+        if (isset($options[self::INPUT_KEY_SET_PRODUCT_SUFFIX]) && $options[self::INPUT_KEY_SET_PRODUCT_SUFFIX] !== null) {
+            $this->_commandOptions['setProductSuffix'] = (string)$options[self::INPUT_KEY_SET_PRODUCT_SUFFIX];
+        }
+
+        if (isset($options[self::INPUT_KEY_SET_CATEGORY_SUFFIX]) && $options[self::INPUT_KEY_SET_CATEGORY_SUFFIX] !== null) {
+            $this->_commandOptions['setCategorySuffix'] = (string)$options[self::INPUT_KEY_SET_CATEGORY_SUFFIX];
         }
 
         if (isset($options[self::INPUT_KEY_NO_REINDEX]) && $options[self::INPUT_KEY_NO_REINDEX] === true) {

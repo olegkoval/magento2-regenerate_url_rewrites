@@ -12,6 +12,8 @@ namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
 
 use Magento\Framework\Phrase;
 use Symfony\Component\Console\Command\Command;
+use Magento\Config\Model\Config\Factory as ConfigFactory;
+use Magento\Config\Model\Config\Reader\Source\Deployed\SettingChecker;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\App\State as AppState;
 use Magento\Store\Model\StoreManagerInterface;
@@ -30,6 +32,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     const INPUT_KEY_SKIP_EXISTING = 'skip-existing';
     const INPUT_KEY_INCLUDE_NOT_VISIBLE = 'include-not-visible';
     const INPUT_KEY_ADD_SKU_TO_URL = 'add-sku-to-url';
+    const INPUT_KEY_SET_PRODUCT_SUFFIX = 'set-product-suffix';
+    const INPUT_KEY_SET_CATEGORY_SUFFIX = 'set-category-suffix';
     const INPUT_KEY_NO_REINDEX = 'no-reindex';
     const INPUT_KEY_NO_PROGRESS = 'no-progress';
     const INPUT_KEY_NO_CACHE_FLUSH = 'no-cache-flush';
@@ -72,6 +76,16 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $regenerateCategoryRewrites;
 
     /**
+     * @var ConfigFactory
+     */
+    protected $_configFactory;
+
+    /**
+     * @var SettingChecker
+     */
+    protected $_settingChecker;
+
+    /**
      * @var array
      */
     protected $_commandOptions = [];
@@ -95,6 +109,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @param RegenerateHelper $helper
      * @param RegenerateCategoryRewrites $regenerateCategoryRewrites
      * @param RegenerateProductRewrites $regenerateProductRewrites
+     * @param ConfigFactory $configFactory
+     * @param SettingChecker $settingChecker
      */
     public function __construct(
         ResourceConnection         $resource,
@@ -102,7 +118,9 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         StoreManagerInterface      $storeManager,
         RegenerateHelper           $helper,
         RegenerateCategoryRewrites $regenerateCategoryRewrites,
-        RegenerateProductRewrites  $regenerateProductRewrites
+        RegenerateProductRewrites  $regenerateProductRewrites,
+        ConfigFactory              $configFactory,
+        SettingChecker             $settingChecker
     )
     {
         parent::__construct();
@@ -113,6 +131,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->helper = $helper;
         $this->regenerateCategoryRewrites = $regenerateCategoryRewrites;
         $this->regenerateProductRewrites = $regenerateProductRewrites;
+        $this->_configFactory = $configFactory;
+        $this->_settingChecker = $settingChecker;
 
         // set default config values
         $this->_commandOptions['entityType'] = 'product';
@@ -132,6 +152,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_commandOptions['skipExisting'] = false;
         $this->_commandOptions['includeNotVisible'] = false;
         $this->_commandOptions['addSkuToUrl'] = false;
+        $this->_commandOptions['setProductSuffix'] = null;
+        $this->_commandOptions['setCategorySuffix'] = null;
     }
 
     /**
@@ -287,5 +309,118 @@ abstract class RegenerateUrlRewritesAbstract extends Command
             $this->_output->writeln(' Done');
             $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh this external cache.');
         }
+    }
+
+    /**
+     * Save --set-product-suffix/--set-category-suffix values (if set) via the same write path
+     * Magento's own `config:set` CLI command uses, so the Suffix backend model's validation and its
+     * automatic swap of the suffix on existing url_rewrite rows both run (see #87).
+     *
+     * Any failure is collected into $_errors rather than thrown, so the caller can abort before running
+     * any regeneration - but a failure on one suffix does not roll back an already-saved sibling suffix.
+     *
+     * @return void
+     */
+    protected function _setSeoUrlSuffixes(): void
+    {
+        if ($this->_commandOptions['setProductSuffix'] !== null) {
+            $this->_trySetConfigValueForRun(
+                'catalog/seo/product_url_suffix',
+                $this->_commandOptions['setProductSuffix'],
+                __('product URL suffix')
+            );
+        }
+
+        if ($this->_commandOptions['setCategorySuffix'] !== null) {
+            $this->_trySetConfigValueForRun(
+                'catalog/seo/category_url_suffix',
+                $this->_commandOptions['setCategorySuffix'],
+                __('category URL suffix')
+            );
+        }
+    }
+
+    /**
+     * @param string $configPath
+     * @param string $value
+     * @param Phrase $label
+     * @return void
+     */
+    private function _trySetConfigValueForRun(string $configPath, string $value, Phrase $label): void
+    {
+        try {
+            $this->_setConfigValueForRun($configPath, $value);
+        } catch (\Exception $e) {
+            $this->_addError(__('ERROR: could not save %label: %msg', ['label' => $label, 'msg' => $e->getMessage()]));
+        }
+    }
+
+    /**
+     * Write a config value to Default Config + every real store view (no --store-id given), or to just
+     * the single requested store (--store-id given) - matching $_commandOptions['storesList'].
+     *
+     * @param string $configPath
+     * @param string $value
+     * @return void
+     */
+    private function _setConfigValueForRun(string $configPath, string $value): void
+    {
+        $isAllStoresRun = is_null($this->_input->getOption(self::INPUT_KEY_STORE_ID));
+
+        if ($isAllStoresRun) {
+            $this->_saveConfigValueForScope($configPath, $value, 'default', '');
+        }
+
+        foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
+            // store_id 0 is the "admin" pseudo-store, not a real store-view scope
+            if ((int)$storeId > 0) {
+                $this->_saveConfigValueForScope($configPath, $value, 'stores', $storeCode);
+            }
+        }
+    }
+
+    /**
+     * @param string $configPath
+     * @param string $value
+     * @param string $scope
+     * @param string $scopeCode
+     * @return void
+     */
+    private function _saveConfigValueForScope(string $configPath, string $value, string $scope, string $scopeCode): void
+    {
+        if ($this->_isConfigLocked($configPath, $scope, $scopeCode)) {
+            $scopeDescriptor = $scopeCode !== '' ? "{$scope}/{$scopeCode}" : $scope;
+
+            throw new \RuntimeException(
+                (string)__(
+                    'value is locked via app/etc/config.php (scope: %scopeDescriptor)',
+                    ['scopeDescriptor' => $scopeDescriptor]
+                )
+            );
+        }
+
+        $config = $this->_configFactory->create(['data' => [
+            'scope' => $scope,
+            'scope_code' => $scopeCode,
+        ]]);
+        $config->setDataByPath($configPath, $value);
+        $config->save();
+    }
+
+    /**
+     * Check whether a config path is locked via app/etc/config.php (config-as-code) for the given
+     * scope, using Magento's own SettingChecker - the exact same check Magento\Config\Model\Config::
+     * save() performs internally (per field, falling back to the Default Config scope) before silently
+     * skipping locked/read-only fields instead of raising an error. Without this pre-check, a locked
+     * field would make the command look like it succeeded while writing nothing.
+     *
+     * @param string $configPath
+     * @param string $scope
+     * @param string $scopeCode
+     * @return bool
+     */
+    private function _isConfigLocked(string $configPath, string $scope, string $scopeCode): bool
+    {
+        return $this->_settingChecker->isReadOnly($configPath, $scope, $scopeCode);
     }
 }
