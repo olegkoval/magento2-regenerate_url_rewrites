@@ -100,6 +100,17 @@ product URLs, with or without `--skip-products`.
 * to append the product's SKU as a URL segment in generated product Url Rewrites (e.g. `screws.html` -> `screws-2244000004.html`), use option `--add-sku-to-url`:
 >`$> php bin/magento ok:urlrewrites:regenerate --add-sku-to-url`
 
+* to set the product URL suffix (e.g. `.html`) before regenerating, use option `--set-product-suffix`:
+>`$> php bin/magento ok:urlrewrites:regenerate --set-product-suffix=.html`
+
+* to set the category URL suffix before regenerating, use option `--set-category-suffix`:
+>`$> php bin/magento ok:urlrewrites:regenerate --entity-type=category --set-category-suffix=.html`
+
+Both suffix options are applied to Default Config and every store view, or only to the store given via
+`--store-id`, using the same write path Magento's own `config:set` CLI command uses — so validation
+(e.g. rejecting `#` or `//`) and Magento's own automatic suffix swap on existing URL Rewrites both run.
+If either suffix value fails validation, the whole command aborts before any regeneration runs.
+
 #### REGENERATE URL REWRITES OF CATEGORY
 * to regenerate Url Rewrites of all categories in all stores, set an entity type to "category":
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=category`

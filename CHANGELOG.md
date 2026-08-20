@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.9.1] - 2026-08-19
+### Added
+- new options `--set-product-suffix` / `--set-category-suffix` — set the product/category URL suffix
+  (e.g. `.html`) before regenerating, via the same write path Magento's own `config:set` CLI command
+  uses, so validation and the automatic suffix swap on existing url_rewrite rows both run. Applied to
+  Default Config and every store view, or only the store given via `--store-id`. If either suffix value
+  fails Magento's validation, the whole command aborts before any regeneration runs.
+
 ## [1.9.0] - 2026-08-11
 ### Added
 - new option `--skip-products` — skip regenerating associated product URLs when regenerating categories (useful on large catalogs when "Use Category Path for Product URLs" is enabled)
