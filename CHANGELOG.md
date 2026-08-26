@@ -4,13 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.9.1] - 2026-08-19
+## [1.9.1] - 2026-08-26
 ### Added
 - new options `--set-product-suffix` / `--set-category-suffix` — set the product/category URL suffix
   (e.g. `.html`) before regenerating, via the same write path Magento's own `config:set` CLI command
   uses, so validation and the automatic suffix swap on existing url_rewrite rows both run. Applied to
   Default Config and every store view, or only the store given via `--store-id`. If either suffix value
   fails Magento's validation, the whole command aborts before any regeneration runs.
+
+### Fixed
+- category `url_path` was not recalculated per store view: when a category's `url_path` had only ever
+  been saved at the default (store 0) scope, Magento's `CategoryUrlPathGenerator` short-circuited and
+  handed back that inherited value instead of building a new one from the store-scoped `url_key`,
+  because the category object's still-populated `url_path` made its `dataHasChangedFor()` checks look
+  unchanged. Now `url_path` is cleared on the category object before generation, matching the pattern
+  already used on the product side. (#184)
 
 ## [1.9.0] - 2026-08-11
 ### Added

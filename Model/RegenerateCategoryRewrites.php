@@ -245,13 +245,17 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             }
         }
 
+        // clear the inherited url_path before generating, otherwise CategoryUrlPathGenerator's
+        // shouldReturnCurrentUrlPath() short-circuits and hands back the default-scope value
+        // instead of recomputing it for this store (see #184)
+        $category->unsUrlPath();
+
         try {
             $urlPath = $this->_getCategoryUrlPathGenerator()->getUrlPath($category);
         } catch (LocalizedException $e) {
             $urlPath = null;
         }
         if (!empty($urlPath)) {
-            $category->unsUrlPath();
             $category->setUrlPath($urlPath);
             $category->getResource()->saveAttribute($category, 'url_path');
         }
