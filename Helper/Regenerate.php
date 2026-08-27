@@ -68,22 +68,6 @@ class Regenerate extends AbstractHelper
     }
 
     /**
-     * @return string
-     */
-    public function getPurchaseProVersionMsg(): string
-    {
-        return __('To use this option you should purchase a Pro version.')->render();
-    }
-
-    /**
-     * @return bool
-     */
-    public function isRegisteredProVersion(): bool
-    {
-        return true;
-    }
-
-    /**
      * Get store manager
      *
      * @return StoreManagerInterface

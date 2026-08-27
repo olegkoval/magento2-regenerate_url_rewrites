@@ -310,10 +310,6 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         }
 
         if (isset($options[self::INPUT_KEY_PRODUCTS_RANGE])) {
-            if (!$this->helper->isRegisteredProVersion()) {
-                $this->_addError($this->helper->getPurchaseProVersionMsg());
-            }
-
             $this->_commandOptions['productsFilter'] = $this->_generateIdsRangeArray(
                 $options[self::INPUT_KEY_PRODUCTS_RANGE],
                 'product'
@@ -322,10 +318,6 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         }
 
         if (isset($options[self::INPUT_KEY_PRODUCT_ID])) {
-            if (!$this->helper->isRegisteredProVersion()) {
-                $this->_addError($this->helper->getPurchaseProVersionMsg());
-            }
-
             $this->_commandOptions['productId'] = (int)$options[self::INPUT_KEY_PRODUCT_ID];
 
             if ($this->_commandOptions['productId'] == 0) {
@@ -336,10 +328,6 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         }
 
         if (isset($options[self::INPUT_KEY_CATEGORIES_RANGE])) {
-            if (!$this->helper->isRegisteredProVersion()) {
-                $this->_addError($this->helper->getPurchaseProVersionMsg());
-            }
-
             $this->_commandOptions['categoriesFilter'] = $this->_generateIdsRangeArray(
                 $options[self::INPUT_KEY_CATEGORIES_RANGE],
                 'category'
@@ -351,10 +339,6 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         }
 
         if (isset($options[self::INPUT_KEY_CATEGORY_ID])) {
-            if (!$this->helper->isRegisteredProVersion()) {
-                $this->_addError($this->helper->getPurchaseProVersionMsg());
-            }
-
             $this->_commandOptions['categoryId'] = (int)$options[self::INPUT_KEY_CATEGORY_ID];
 
             if ($this->_commandOptions['categoryId'] == 0) {
