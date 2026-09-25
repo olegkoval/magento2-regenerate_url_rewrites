@@ -59,6 +59,24 @@ abstract class AbstractRegenerateRewrites
     protected $regenerateOptions = [];
 
     /**
+     * Default regenerate options, merged under whatever setRegenerateOptions() receives
+     * @var array
+     */
+    protected array $defaultRegenerateOptions = [
+        'saveOldUrls' => false,
+        'categoriesFilter' => [],
+        'productsFilter' => [],
+        'categoryId' => null,
+        'productId' => null,
+        'regenUrlKey' => false,
+        'showProgress' => false,
+        'skipProducts' => false,
+        'skipExisting' => false,
+        'includeNotVisible' => false,
+        'addSkuToUrl' => false,
+    ];
+
+    /**
      * @var RegenerateHelper
      */
     protected $helper;
@@ -81,30 +99,22 @@ abstract class AbstractRegenerateRewrites
     {
         $this->helper = $helper;
         $this->resourceConnection = $resourceConnection;
-
-        // set default regenerate options
-        $this->regenerateOptions['saveOldUrls'] = false;
-        $this->regenerateOptions['categoriesFilter'] = [];
-        $this->regenerateOptions['productsFilter'] = [];
-        $this->regenerateOptions['categoryId'] = null;
-        $this->regenerateOptions['productId'] = null;
-        $this->regenerateOptions['checkUseCategoryInProductUrl'] = false;
-        $this->regenerateOptions['regenUrlKey'] = false;
-        $this->regenerateOptions['showProgress'] = false;
-        $this->regenerateOptions['skipProducts'] = false;
-        $this->regenerateOptions['skipExisting'] = false;
-        $this->regenerateOptions['includeNotVisible'] = false;
-        $this->regenerateOptions['addSkuToUrl'] = false;
+        $this->regenerateOptions = $this->defaultRegenerateOptions;
     }
 
     /**
-     * Regenerate Url Rewrites in specific store
-     * @param int $storeId
-     * @return mixed
+     * Set regenerate options; keys not given fall back to the defaults
+     *
+     * Merges over the defaults rather than the current options, since model instances are shared
+     * (e.g. the category model re-sets the product model's options per category) and a previous
+     * call's keys must not leak into the next one.
+     *
+     * @param array $options
+     * @return void
      */
     public function setRegenerateOptions(array $options): void
     {
-        $this->regenerateOptions = $options;
+        $this->regenerateOptions = array_merge($this->defaultRegenerateOptions, $options);
     }
 
     abstract function regenerate(int $storeId = 0);
