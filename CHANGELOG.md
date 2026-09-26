@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [1.10.0] - 2026-09-26
 ### Changed
 - the command now reports failures instead of silently skipping them: products/categories whose URL
   rewrites couldn't be generated or saved (and failed cleanup steps) are listed in an end-of-run summary —
