@@ -173,7 +173,11 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
             $currentPage++;
         }
 
-        $this->_updateSecondaryTable();
+        // internal option: a caller running several batches syncs the product/category table once itself
+        // (a full-table scan each time otherwise)
+        if (!$this->regenerateOptions['skipSecondaryTableUpdate']) {
+            $this->_updateSecondaryTable();
+        }
 
         return $this;
     }

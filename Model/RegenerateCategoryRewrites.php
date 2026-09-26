@@ -26,6 +26,11 @@ use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator;
 class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 {
     /**
+     * Products regenerated per batch after a category pass (bounds the collection and its SQL IN list)
+     */
+    protected const PRODUCT_BATCH_SIZE = 1000;
+
+    /**
      * @var string
      */
     protected $entityType = 'category';
@@ -74,6 +79,12 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
      * @var RegenerateProductRewrites
      */
     protected $regenerateProductRewrites;
+
+    /**
+     * Product IDs (as keys) to regenerate once the current category pass has finished
+     * @var array<int, true>
+     */
+    protected array $pendingProductIds = [];
 
     /**
      * @param RegenerateHelper $helper
@@ -215,6 +226,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         $this->progressBarProgress = 0;
         $this->progressBarTotal = (int)$categories->getSize();
         $currentPage = 1;
+        $this->pendingProductIds = [];
 
         $this->_showProgress();
         while ($currentPage <= $pageCount) {
@@ -233,6 +245,29 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             }
 
             $currentPage++;
+        }
+
+        // products of all processed categories, each regenerated once, after every category's url_path is
+        // final (regenerating per category repeated each product once per ancestor category) — in bounded
+        // batches so no single collection/SQL IN list spans the whole catalog; one table sync below covers all
+        if (!empty($this->pendingProductIds)) {
+            $options = $this->regenerateOptions;
+            $options['showProgress'] = false;
+            $options['skipSecondaryTableUpdate'] = true;
+            $this->regenerateProductRewrites->setRegenerateOptions($options);
+
+            $batch = [];
+            foreach ($this->pendingProductIds as $productId => $unused) {
+                $batch[] = $productId;
+                if (count($batch) === self::PRODUCT_BATCH_SIZE) {
+                    $this->_regenerateProductsBatch($batch, $storeId);
+                    $batch = [];
+                }
+            }
+            if (!empty($batch)) {
+                $this->_regenerateProductsBatch($batch, $storeId);
+            }
+            $this->pendingProductIds = [];
         }
 
         $this->_updateSecondaryTable();
@@ -320,15 +355,11 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $this->saveUrlRewrites($categoryUrlRewriteResult);
         }
 
-        // if config option "Use Category Path for Product URLs" is "Yes" then regenerate product urls,
-        // unless explicitly skipped (see #86)
+        // if config option "Use Category Path for Product URLs" is "Yes" then queue this category's products
+        // for regeneration at the end of the pass, unless explicitly skipped (see #86)
         if (!$this->regenerateOptions['skipProducts'] && $this->helper->useCategoriesPathForProductUrls($storeId)) {
-            $productsIds = $this->_getCategoriesProductsIds($category->getAllChildren());
-            if (!empty($productsIds)) {
-                $options = $this->regenerateOptions;
-                $options['showProgress'] = false;
-                $this->regenerateProductRewrites->setRegenerateOptions($options);
-                $this->regenerateProductRewrites->regenerateProductsRangeUrlRewrites($productsIds, $storeId);
+            foreach ($this->_getCategoriesProductsIds($category->getAllChildren()) as $productId) {
+                $this->pendingProductIds[(int)$productId] = true;
             }
         }
 
@@ -336,6 +367,26 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         $this->_resetUrlRewritesDataMaps($category);
 
         return $this;
+    }
+
+    /**
+     * @param int[] $productIds
+     * @param int $storeId
+     * @return void
+     */
+    protected function _regenerateProductsBatch(array $productIds, int $storeId): void
+    {
+        try {
+            $this->regenerateProductRewrites->regenerateProductsRangeUrlRewrites($productIds, $storeId);
+        } catch (\Exception $e) {
+            // a batch that can't even be loaded is reported like any other failure; the run continues
+            $this->_addFailure(
+                'product',
+                null,
+                $storeId,
+                'regenerating ' . count($productIds) . ' products of the category run failed: ' . $e->getMessage()
+            );
+        }
     }
 
     /**

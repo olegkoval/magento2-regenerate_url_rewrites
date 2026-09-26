@@ -75,6 +75,7 @@ abstract class AbstractRegenerateRewrites
         'includeNotVisible' => false,
         'addSkuToUrl' => false,
         'defaultScopeOnly' => false,
+        'skipSecondaryTableUpdate' => false,
     ];
 
     /**

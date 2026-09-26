@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
   updates default-scope `url_key`/`url_path`, and each store view is generated once — with identical
   results; on a two-store-view sample catalog full runs were ~15–30% faster, and the saving grows with the
   number of store views
+- category runs with "Use Categories Path for Product URLs" enabled regenerate each affected product once,
+  after all categories are done, instead of once per ancestor category (plus a full scan of the
+  product/category rewrite table after every category) — identical results; on the sample catalog a full
+  category run went from ~22s to ~5s
 
 ### Fixed
 - `--store-id=0` (global scope) runs dropped the product rewrites of every store view after the first
