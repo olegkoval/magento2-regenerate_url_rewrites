@@ -26,6 +26,42 @@ jobs:
       - name: Lint all PHP files
         run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
 
+  phpunit:
+    name: phpunit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4', '8.5']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer
+      - name: Install Magento modules the tests need
+        # outside the repo, from the Mage-OS mirror of Magento's packages (no Marketplace keys needed); composer
+        # picks the newest Magento line supporting the matrix PHP, and links this checkout as the module
+        run: |
+          mkdir -p "$RUNNER_TEMP/mage" && cd "$RUNNER_TEMP/mage"
+          cat > composer.json <<EOF
+          {
+              "repositories": [
+                  {"type": "path", "url": "$GITHUB_WORKSPACE", "options": {"symlink": true}},
+                  {"type": "composer", "url": "https://mirror.mage-os.org/"}
+              ],
+              "minimum-stability": "dev",
+              "prefer-stable": true,
+              "config": {"allow-plugins": false}
+          }
+          EOF
+          composer require --no-interaction --no-progress --no-plugins \
+            "olegkoval/magento2-regenerate-url-rewrites:*@dev" \
+            "magento/module-catalog-url-rewrite:100.4.*" "magento/module-config:*" "phpunit/phpunit:^10.5"
+      - name: Run unit tests
+        run: '"$RUNNER_TEMP/mage/vendor/bin/phpunit" --bootstrap "$RUNNER_TEMP/mage/vendor/autoload.php" --do-not-cache-result "$GITHUB_WORKSPACE/Test/Unit"'
+
   phpcs:
     name: phpcs (Magento 2 coding standard)
     runs-on: ubuntu-latest

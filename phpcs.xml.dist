@@ -6,6 +6,7 @@
     <file>Helper</file>
     <file>Model</file>
     <file>registration.php</file>
+    <file>Test</file>
     <arg name="extensions" value="php"/>
 
     <rule ref="Magento2"/>
