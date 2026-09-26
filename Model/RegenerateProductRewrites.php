@@ -229,6 +229,14 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
                 $storeId
             );
 
+            // store 0 in an all-stores run only updates the default-scope attributes above: generating here
+            // (global scope) would regenerate every store view, which the run then does again per store view
+            if ($this->regenerateOptions['defaultScopeOnly']) {
+                $this->progressBarProgress++;
+
+                return $this;
+            }
+
             // append the product's SKU as an extra URL segment, e.g. screws.html -> screws-2244000004.html
             // (see #140). Set on the in-memory url_key only (after updateAttributes(), so never saved) and
             // before generation, so Magento's generator itself builds the history 301s (--save-old-urls) and
@@ -244,10 +252,16 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
             $urlRewrites = $this->_getProductUrlRewriteGenerator()->generate($entity);
             $urlRewrites = $this->helper->sanitizeProductUrlRewrites($urlRewrites);
 
+            // replace the requested store's rows only: with product_rewrite_context=website Magento also
+            // generates sibling store views of the group, but re-emits custom/history rows only for the
+            // requested store, so a wider delete would lose the siblings' custom rewrites. A global-scope
+            // (store 0) run has no store-0 rows: it replaces the rows of the store views it generated
             if (!empty($urlRewrites)) {
                 $this->saveUrlRewrites(
                     $urlRewrites,
-                    [['entity_type' => $this->entityType, 'entity_id' => $entity->getId(), 'store_id' => $storeId]]
+                    $storeId == 0
+                        ? []
+                        : [['entity_type' => $this->entityType, 'entity_id' => $entity->getId(), 'store_id' => $storeId]]
                 );
             }
         } catch (\Exception $e) {

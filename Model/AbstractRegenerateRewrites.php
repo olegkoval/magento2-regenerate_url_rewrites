@@ -74,6 +74,7 @@ abstract class AbstractRegenerateRewrites
         'skipExisting' => false,
         'includeNotVisible' => false,
         'addSkuToUrl' => false,
+        'defaultScopeOnly' => false,
     ];
 
     /**
@@ -585,6 +586,10 @@ abstract class AbstractRegenerateRewrites
      * Check if any Url Rewrite already exists for this entity/store, regardless of request_path
      * (used by --skip-existing, see #50)
      *
+     * In the default-scope-only pass (store 0 of an all-stores run) "existing" means in any store: that
+     * pass changes the shared default url_key/url_path, so an entity the store views will skip must not
+     * be touched there either, or its attributes and rewrites drift apart.
+     *
      * @param int $entityId
      * @param int $storeId
      * @return bool
@@ -594,8 +599,10 @@ abstract class AbstractRegenerateRewrites
         $select = $this->_getResourceConnection()->getConnection()->select()
             ->from($this->_getMainTableName(), ['url_rewrite_id'])
             ->where('entity_type = ?', $this->entityType)
-            ->where('entity_id = ?', $entityId)
-            ->where('store_id = ?', $storeId);
+            ->where('entity_id = ?', $entityId);
+        if (!$this->regenerateOptions['defaultScopeOnly']) {
+            $select->where('store_id = ?', $storeId);
+        }
         return (bool)$this->_getResourceConnection()->getConnection()->fetchOne($select);
     }
 

@@ -209,10 +209,16 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             : $this->regenerateProductRewrites;
         $regenerator->resetFailures();
 
+        $isAllStoresRun = is_null($this->_input->getOption(self::INPUT_KEY_STORE_ID));
+
         foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
             $this->_output->writeln('');
             $this->_output->writeln("[Type: {$this->_commandOptions['entityType']}, Store ID: {$storeId}, Store View code: {$storeCode}]:");
             $this->_storeManager->setCurrentStore($storeId);
+
+            // in an all-stores run every store view is processed below, so store 0 (processed first) only needs
+            // its default-scope url_key/url_path updates, not a global-scope regeneration of all store views
+            $this->_commandOptions['defaultScopeOnly'] = $isAllStoresRun && (int)$storeId === 0;
 
             if ($this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT) {
                 $this->regenerateProductRewrites->setRegenerateOptions($this->_commandOptions);

@@ -154,6 +154,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_commandOptions['addSkuToUrl'] = false;
         $this->_commandOptions['setProductSuffix'] = null;
         $this->_commandOptions['setCategorySuffix'] = null;
+        $this->_commandOptions['defaultScopeOnly'] = false;
     }
 
     /**

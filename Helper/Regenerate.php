@@ -108,9 +108,12 @@ class Regenerate extends AbstractHelper
             }
 
             $path = $this->_clearRequestPath($urlRewrite->getRequestPath());
-            if (!in_array($path, $paths)) {
+            // a path is only a duplicate within the same store: a global-scope (store 0) run generates the
+            // same path once per store view
+            $storePath = $urlRewrite->getStoreId() . '|' . $path;
+            if (!isset($paths[$storePath])) {
                 $productUrlRewrites[$key]->setRequestPath($path);
-                $paths[] = $path;
+                $paths[$storePath] = true;
             } else {
                 unset($productUrlRewrites[$key]);
             }

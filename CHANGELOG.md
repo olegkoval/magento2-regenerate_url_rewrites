@@ -11,8 +11,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
   counts per entity type plus up to 20 of the failures — and the command **exits with code 1**. Reindex and
   cache refresh still run first. Previously it always exited 0, so cron jobs/scripts that check the exit
   code may now start alerting on failures that used to be hidden.
+- all-stores runs no longer regenerate every store view twice: the store 0 (default scope) pass now only
+  updates default-scope `url_key`/`url_path`, and each store view is generated once — with identical
+  results; on a two-store-view sample catalog full runs were ~15–30% faster, and the saving grows with the
+  number of store views
 
 ### Fixed
+- `--store-id=0` (global scope) runs dropped the product rewrites of every store view after the first
+  (identical paths in different store views were treated as duplicates) and didn't replace the store views'
+  current rewrites, so old URLs kept serving pages and `--save-old-urls` redirects were lost
 - `--save-old-urls` now actually creates 301 redirects: when a URL changes, the old URL redirects to the
   new one. Before, the old URL kept serving the page as an ordinary rewrite (duplicate content) and the
   redirect Magento generated was silently dropped when saving (#174, #142). This includes switching to

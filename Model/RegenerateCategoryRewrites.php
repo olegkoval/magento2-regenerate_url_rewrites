@@ -297,6 +297,12 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $category->getResource()->saveAttribute($category, 'url_path');
         }
 
+        // store 0 in an all-stores run only updates the default-scope url_key/url_path above: generating
+        // here (global scope) would regenerate every store view, which the run then does again per store view
+        if ($this->regenerateOptions['defaultScopeOnly']) {
+            return $this;
+        }
+
         $category->setChangedProductIds(true);
 
         try {
