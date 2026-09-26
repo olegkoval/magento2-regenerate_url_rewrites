@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: php -l (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4', '8.5']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
+      - name: Lint all PHP files
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+
+  phpcs:
+    name: phpcs (Magento 2 coding standard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer
+      - name: Install Magento coding standard
+        # installed outside the repo: this is a library, not a Magento project, so no require-dev here
+        run: |
+          mkdir -p "$RUNNER_TEMP/mcs" && cd "$RUNNER_TEMP/mcs"
+          echo '{}' > composer.json
+          composer config --no-plugins allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+          composer require --no-interaction --no-progress magento/magento-coding-standard:^41
+          vendor/bin/phpcs --config-set installed_paths ../../magento/magento-coding-standard,../../magento/php-compatibility-fork,../../phpcsstandards/phpcsutils
+      - name: phpcs errors (fails the build)
+        run: '"$RUNNER_TEMP/mcs/vendor/bin/phpcs" --warning-severity=0 -q'
+      - name: phpcs warnings (informational)
+        run: '"$RUNNER_TEMP/mcs/vendor/bin/phpcs" -q --report=summary --runtime-set ignore_warnings_on_exit 1 || true'
