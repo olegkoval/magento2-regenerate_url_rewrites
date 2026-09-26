@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Added
+- a public service API to run the regeneration from code (cron jobs, queue consumers, integrations):
+  `Api\RegenerateServiceInterface` (`validate()`, `run()`), run options built with `Model\RunOptionsBuilder`,
+  a `RunResultInterface` with failure counts/details, and an optional `ProgressReporterInterface`. The CLI
+  command now runs through it; its options and output are unchanged. See "Use From Code" in the README.
+
+### Changed
+- reindex and cache refresh after a run now happen in the same PHP process through Magento's indexer and
+  cache services instead of spawning `bin/magento indexer:reindex` / `cache:clean` / `cache:flush`: they
+  use the run's own memory limit (e.g. `php -d memory_limit=-1 bin/magento ...`), which the spawned processes
+  didn't inherit, and a failing or locked indexer is now reported in the `[FAILURES]` summary (exit code 1)
+  instead of being ignored
+- a `--set-product-suffix`/`--set-category-suffix` value locked in `app/etc/config.php` is now reported before
+  anything is saved; before, the other suffix was still saved and then the run aborted
+
 ## [1.10.0] - 2026-09-26
 ### Changed
 - the command now reports failures instead of silently skipping them: products/categories whose URL

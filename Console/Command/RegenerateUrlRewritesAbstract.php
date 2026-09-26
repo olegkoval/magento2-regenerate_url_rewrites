@@ -14,9 +14,11 @@ use Magento\Framework\Phrase;
 use Symfony\Component\Console\Command\Command;
 use Magento\Config\Model\Config\Factory as ConfigFactory;
 use Magento\Config\Model\Config\Reader\Source\Deployed\SettingChecker;
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\App\State as AppState;
 use Magento\Store\Model\StoreManagerInterface;
+use OlegKoval\RegenerateUrlRewrites\Api\RegenerateServiceInterface;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateCategoryRewrites;
@@ -86,6 +88,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected $_settingChecker;
 
     /**
+     * @var RegenerateServiceInterface
+     */
+    protected RegenerateServiceInterface $regenerateService;
+
+    /**
      * @var array
      */
     protected $_commandOptions = [];
@@ -111,6 +118,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @param RegenerateProductRewrites $regenerateProductRewrites
      * @param ConfigFactory $configFactory
      * @param SettingChecker $settingChecker
+     * @param RegenerateServiceInterface|null $regenerateService null: a subclass calling this with the 8 arguments of
+     *        releases before 1.11.0 (the service comes from the ObjectManager then)
      */
     public function __construct(
         ResourceConnection         $resource,
@@ -120,7 +129,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         RegenerateCategoryRewrites $regenerateCategoryRewrites,
         RegenerateProductRewrites  $regenerateProductRewrites,
         ConfigFactory              $configFactory,
-        SettingChecker             $settingChecker
+        SettingChecker             $settingChecker,
+        ?RegenerateServiceInterface $regenerateService = null
     )
     {
         parent::__construct();
@@ -133,6 +143,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->regenerateProductRewrites = $regenerateProductRewrites;
         $this->_configFactory = $configFactory;
         $this->_settingChecker = $settingChecker;
+        $this->regenerateService = $regenerateService
+            ?? ObjectManager::getInstance()->get(RegenerateServiceInterface::class);
 
         // set default config values
         $this->_commandOptions['entityType'] = 'product';
@@ -277,151 +289,5 @@ abstract class RegenerateUrlRewritesAbstract extends Command
             $this->_output->writeln('');
             $this->_output->writeln('');
         }
-    }
-
-    /**
-     * Run re-indexation
-     * @return void
-     */
-    protected function _runReindexation(): void
-    {
-        if ($this->_commandOptions['runReindex']) {
-            $this->_output->write('Reindexation...');
-            shell_exec(escapeshellarg(PHP_BINARY) . ' bin/magento indexer:reindex');
-            $this->_output->writeln(' Done');
-        }
-    }
-
-    /**
-     * Clear cache
-     *
-     * @return void
-     */
-    protected function _runClearCache(): void
-    {
-        if ($this->_commandOptions['runCacheClean'] || $this->_commandOptions['runCacheFlush']) {
-            $this->_output->write('Cache refreshing...');
-            if ($this->_commandOptions['runCacheClean']) {
-                shell_exec(escapeshellarg(PHP_BINARY) . ' bin/magento cache:clean');
-            }
-            if ($this->_commandOptions['runCacheFlush']) {
-                shell_exec(escapeshellarg(PHP_BINARY) . ' bin/magento cache:flush');
-            }
-            $this->_output->writeln(' Done');
-            $this->_output->writeln('If you use some external cache mechanisms (e.g.: Redis, Varnish, etc.) - please, refresh this external cache.');
-        }
-    }
-
-    /**
-     * Save --set-product-suffix/--set-category-suffix values (if set) via the same write path
-     * Magento's own `config:set` CLI command uses, so the Suffix backend model's validation and its
-     * automatic swap of the suffix on existing url_rewrite rows both run (see #87).
-     *
-     * Any failure is collected into $_errors rather than thrown, so the caller can abort before running
-     * any regeneration - but a failure on one suffix does not roll back an already-saved sibling suffix.
-     *
-     * @return void
-     */
-    protected function _setSeoUrlSuffixes(): void
-    {
-        if ($this->_commandOptions['setProductSuffix'] !== null) {
-            $this->_trySetConfigValueForRun(
-                'catalog/seo/product_url_suffix',
-                $this->_commandOptions['setProductSuffix'],
-                __('product URL suffix')
-            );
-        }
-
-        if ($this->_commandOptions['setCategorySuffix'] !== null) {
-            $this->_trySetConfigValueForRun(
-                'catalog/seo/category_url_suffix',
-                $this->_commandOptions['setCategorySuffix'],
-                __('category URL suffix')
-            );
-        }
-    }
-
-    /**
-     * @param string $configPath
-     * @param string $value
-     * @param Phrase $label
-     * @return void
-     */
-    private function _trySetConfigValueForRun(string $configPath, string $value, Phrase $label): void
-    {
-        try {
-            $this->_setConfigValueForRun($configPath, $value);
-        } catch (\Exception $e) {
-            $this->_addError(__('ERROR: could not save %label: %msg', ['label' => $label, 'msg' => $e->getMessage()]));
-        }
-    }
-
-    /**
-     * Write a config value to Default Config + every real store view (no --store-id given), or to just
-     * the single requested store (--store-id given) - matching $_commandOptions['storesList'].
-     *
-     * @param string $configPath
-     * @param string $value
-     * @return void
-     */
-    private function _setConfigValueForRun(string $configPath, string $value): void
-    {
-        $isAllStoresRun = is_null($this->_input->getOption(self::INPUT_KEY_STORE_ID));
-
-        if ($isAllStoresRun) {
-            $this->_saveConfigValueForScope($configPath, $value, 'default', '');
-        }
-
-        foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
-            // store_id 0 is the "admin" pseudo-store, not a real store-view scope
-            if ((int)$storeId > 0) {
-                $this->_saveConfigValueForScope($configPath, $value, 'stores', $storeCode);
-            }
-        }
-    }
-
-    /**
-     * @param string $configPath
-     * @param string $value
-     * @param string $scope
-     * @param string $scopeCode
-     * @return void
-     */
-    private function _saveConfigValueForScope(string $configPath, string $value, string $scope, string $scopeCode): void
-    {
-        if ($this->_isConfigLocked($configPath, $scope, $scopeCode)) {
-            $scopeDescriptor = $scopeCode !== '' ? "{$scope}/{$scopeCode}" : $scope;
-
-            throw new \RuntimeException(
-                (string)__(
-                    'value is locked via app/etc/config.php (scope: %scopeDescriptor)',
-                    ['scopeDescriptor' => $scopeDescriptor]
-                )
-            );
-        }
-
-        $config = $this->_configFactory->create(['data' => [
-            'scope' => $scope,
-            'scope_code' => $scopeCode,
-        ]]);
-        $config->setDataByPath($configPath, $value);
-        $config->save();
-    }
-
-    /**
-     * Check whether a config path is locked via app/etc/config.php (config-as-code) for the given
-     * scope, using Magento's own SettingChecker - the exact same check Magento\Config\Model\Config::
-     * save() performs internally (per field, falling back to the Default Config scope) before silently
-     * skipping locked/read-only fields instead of raising an error. Without this pre-check, a locked
-     * field would make the command look like it succeeded while writing nothing.
-     *
-     * @param string $configPath
-     * @param string $scope
-     * @param string $scopeCode
-     * @return bool
-     */
-    private function _isConfigLocked(string $configPath, string $scope, string $scopeCode): bool
-    {
-        return $this->_settingChecker->isReadOnly($configPath, $scope, $scopeCode);
     }
 }

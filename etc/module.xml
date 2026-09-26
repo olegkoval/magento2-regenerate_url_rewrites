@@ -16,6 +16,7 @@
             <module name="Magento_Catalog"/>
             <module name="Magento_CatalogUrlRewrite"/>
             <module name="Magento_UrlRewrite"/>
+            <module name="Magento_Indexer"/>
         </sequence>
     </module>
 </config>

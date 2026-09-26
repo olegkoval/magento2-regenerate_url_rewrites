@@ -10,6 +10,7 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Model;
 
+use OlegKoval\RegenerateUrlRewrites\Api\ProgressReporterInterface;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
 use Magento\UrlRewrite\Model\Storage\DbStorage;
@@ -28,14 +29,10 @@ abstract class AbstractRegenerateRewrites
     protected $storeRootCategoryId = [];
 
     /**
-     * @var integer
+     * Receives progress while the "showProgress" option is on; null: progress is not reported
+     * @var ProgressReporterInterface|null
      */
-    protected $progressBarProgress = 0;
-
-    /**
-     * @var integer
-     */
-    protected $progressBarTotal = 0;
+    protected ?ProgressReporterInterface $progressReporter = null;
 
     /**
      * @var string
@@ -269,49 +266,45 @@ abstract class AbstractRegenerateRewrites
     }
 
     /**
-     * Show a progress bar in the console
-     *
-     * @param int $size
+     * @param ProgressReporterInterface|null $reporter null: stop reporting progress
+     * @return $this
      */
-    protected function _showProgress(int $size = 70): void
+    public function setProgressReporter(?ProgressReporterInterface $reporter): static
     {
-        if (!$this->regenerateOptions['showProgress']) {
-            return;
+        $this->progressReporter = $reporter;
+
+        return $this;
+    }
+
+    /**
+     * @param int $storeId
+     * @param int $total
+     * @return void
+     */
+    protected function _progressStart(int $storeId, int $total): void
+    {
+        if ($this->regenerateOptions['showProgress'] && $this->progressReporter !== null) {
+            $this->progressReporter->start($this->entityType, $storeId, $total);
         }
+    }
 
-        if ($this->progressBarTotal === 0) {
-            echo "\r[" . str_repeat('=', $size + 1) . "] 100%  0/0\r\n";
-            flush();
-            return;
+    /**
+     * @return void
+     */
+    protected function _progressAdvance(): void
+    {
+        if ($this->regenerateOptions['showProgress'] && $this->progressReporter !== null) {
+            $this->progressReporter->advance();
         }
+    }
 
-        // if we go over our bound, just ignore it
-        if ($this->progressBarProgress > $this->progressBarTotal) {
-            return;
-        }
-
-        $perc = $this->progressBarTotal ? (float)($this->progressBarProgress / $this->progressBarTotal) : 1;
-        $bar = floor($perc * $size);
-
-        $status_bar = "\r[";
-        $status_bar .= str_repeat('=', $bar);
-        if ($bar < $size) {
-            $status_bar .= '>';
-            $status_bar .= str_repeat(' ', $size - $bar);
-        } else {
-            $status_bar .= '=';
-        }
-
-        $disp = number_format($perc * 100, 0);
-
-        $status_bar .= "] {$disp}%  {$this->progressBarProgress}/{$this->progressBarTotal}";
-
-        echo $status_bar;
-        flush();
-
-        // when done, send a newline
-        if ($this->progressBarProgress == $this->progressBarTotal) {
-            echo "\r\n";
+    /**
+     * @return void
+     */
+    protected function _progressFinish(): void
+    {
+        if ($this->regenerateOptions['showProgress'] && $this->progressReporter !== null) {
+            $this->progressReporter->finish();
         }
     }
 

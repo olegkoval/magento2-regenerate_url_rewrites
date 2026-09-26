@@ -156,22 +156,21 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
     {
         $products = $this->_getProductsCollection($productsFilter, $storeId);
         $pageCount = $products->getLastPageNumber();
-        $this->progressBarProgress = 1;
-        $this->progressBarTotal = (int)$products->getSize();
         $currentPage = 1;
 
-        $this->_showProgress();
+        $this->_progressStart($storeId, (int)$products->getSize());
         while ($currentPage <= $pageCount) {
             $products->clear();
             $products->setCurPage($currentPage);
 
             foreach ($products as $product) {
-                $this->_showProgress();
                 $this->processProduct($product, $storeId);
+                $this->_progressAdvance();
             }
 
             $currentPage++;
         }
+        $this->_progressFinish();
 
         // internal option: a caller running several batches syncs the product/category table once itself
         // (a full-table scan each time otherwise)
@@ -192,7 +191,6 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
         // skip entities that already have a URL Rewrite for this store, instead of always
         // deleting + regenerating (see #50)
         if ($this->regenerateOptions['skipExisting'] && $this->_urlRewriteExistsForEntity($entity->getId(), $storeId)) {
-            $this->progressBarProgress++;
             return $this;
         }
 
@@ -236,7 +234,6 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
             // store 0 in an all-stores run only updates the default-scope attributes above: generating here
             // (global scope) would regenerate every store view, which the run then does again per store view
             if ($this->regenerateOptions['defaultScopeOnly']) {
-                $this->progressBarProgress++;
 
                 return $this;
             }
@@ -271,8 +268,6 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
         } catch (\Exception $e) {
             $this->_addFailure($this->entityType, (int)$entity->getId(), $storeId, $e->getMessage());
         }
-
-        $this->progressBarProgress++;
 
         return $this;
     }

@@ -10,8 +10,10 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
 
-use Magento\Framework\App\Area;
-use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Exception\InputException;
+use OlegKoval\RegenerateUrlRewrites\Api\Data\RunOptionsInterface;
+use OlegKoval\RegenerateUrlRewrites\Console\ConsoleProgressReporter;
+use OlegKoval\RegenerateUrlRewrites\Model\RunOptionsBuilder;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -184,74 +186,25 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             return  Command::FAILURE;
         }
 
-        // set area code if needed
         try {
-            $areaCode = $this->_appState->getAreaCode();
-        } catch (LocalizedException $e) {
-            // if area code is not set then magento generate exception "LocalizedException"
-            try {
-                $this->_appState->setAreaCode(Area::AREA_ADMINHTML);
-            } catch (LocalizedException $e) {}
-        }
-
-        $this->_setSeoUrlSuffixes();
-
-        if (count($this->_errors) > 0) {
-            foreach ($this->_errors as $error) {
-                $this->_addConsoleMsg($error);
+            $result = $this->regenerateService->run(
+                $this->buildRunOptions(),
+                new ConsoleProgressReporter($this->_output, $this->_commandOptions['showProgress'])
+            );
+        } catch (InputException $e) {
+            foreach ($e->getErrors() ?: [$e] as $error) {
+                $this->_addConsoleMsg($error->getMessage());
             }
             $this->_displayConsoleMsg();
             return Command::FAILURE;
         }
 
-        $regenerator = $this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY
-            ? $this->regenerateCategoryRewrites
-            : $this->regenerateProductRewrites;
-        $regenerator->resetFailures();
-
-        $isAllStoresRun = is_null($this->_input->getOption(self::INPUT_KEY_STORE_ID));
-
-        foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
-            $this->_output->writeln('');
-            $this->_output->writeln("[Type: {$this->_commandOptions['entityType']}, Store ID: {$storeId}, Store View code: {$storeCode}]:");
-            $this->_storeManager->setCurrentStore($storeId);
-
-            // in an all-stores run every store view is processed below, so store 0 (processed first) only needs
-            // its default-scope url_key/url_path updates, not a global-scope regeneration of all store views
-            $this->_commandOptions['defaultScopeOnly'] = $isAllStoresRun && (int)$storeId === 0;
-
-            if ($this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT) {
-                $this->regenerateProductRewrites->setRegenerateOptions($this->_commandOptions);
-                $this->regenerateProductRewrites->regenerate($storeId);
-            } elseif ($this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY) {
-                $this->regenerateCategoryRewrites->setRegenerateOptions($this->_commandOptions);
-                $this->regenerateCategoryRewrites->regenerate($storeId);
-            }
-        }
-
-        if ($this->_commandOptions['deleteOrphanedRewrites']) {
-            $this->_output->write('Deleting orphaned url_rewrite rows...');
-            if ($this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_PRODUCT) {
-                $this->regenerateProductRewrites->deleteOrphanedRewrites();
-            } elseif ($this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY) {
-                $this->regenerateCategoryRewrites->deleteOrphanedRewrites();
-            }
-            $this->_output->writeln(' Done');
-        }
-
-        $this->_output->writeln('');
-        $this->_output->writeln('');
-
         $this->_displayConsoleMsg();
-
-        $this->_runReindexation();
-        $this->_runClearCache();
 
         $this->_showSupportMe();
 
-        $failureCounts = $regenerator->getFailureCounts();
-        if (count($failureCounts) > 0) {
-            $this->_displayFailures($failureCounts, $regenerator->getFailures());
+        if ($result->hasFailures()) {
+            $this->_displayFailures($result->getFailureCounts(), $result->getFailures());
             $this->_output->writeln('Finished with failures');
 
             return Command::FAILURE;
@@ -290,6 +243,36 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             $this->_output->writeln("  ...and {$hidden} more");
         }
         $this->_output->writeln('');
+    }
+
+    /**
+     * Map the parsed command options to the service's run options (a subclass can add its own)
+     *
+     * @return RunOptionsInterface
+     */
+    protected function buildRunOptions(): RunOptionsInterface
+    {
+        $options = $this->_commandOptions;
+        $isAllStoresRun = is_null($this->_input->getOption(self::INPUT_KEY_STORE_ID));
+
+        return (new RunOptionsBuilder())
+            ->setEntityType($options['entityType'])
+            ->setStoreIds($isAllStoresRun ? [] : array_keys($options['storesList']))
+            ->setProductIds($options['productsFilter'] ?: ($options['productId'] ? [$options['productId']] : []))
+            ->setCategoryIds($options['categoriesFilter'] ?: ($options['categoryId'] ? [$options['categoryId']] : []))
+            ->setSaveOldUrls($options['saveOldUrls'])
+            ->setRegenUrlKey($options['regenUrlKey'])
+            ->setSkipExisting($options['skipExisting'])
+            ->setSkipProducts($options['skipProducts'])
+            ->setIncludeNotVisible($options['includeNotVisible'])
+            ->setAddSkuToUrl($options['addSkuToUrl'])
+            ->setDeleteOrphanedRewrites($options['deleteOrphanedRewrites'])
+            ->setProductUrlSuffix($options['setProductSuffix'])
+            ->setCategoryUrlSuffix($options['setCategorySuffix'])
+            ->setReindex($options['runReindex'])
+            ->setCleanCache($options['runCacheClean'])
+            ->setFlushCache($options['runCacheFlush'])
+            ->create();
     }
 
     /**

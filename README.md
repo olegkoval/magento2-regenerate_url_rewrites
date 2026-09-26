@@ -20,6 +20,7 @@ Changelog: [CHANGELOG.md](CHANGELOG.md)
 * [Combining Options](#combining-options)
 * [Deprecated Options](#deprecated-options)
 * [More Examples](#more-examples)
+* [Use From Code](#use-from-code)
 * [Support Me](#support-me)
 * [Contacts](#contacts)
 * [License](#license)
@@ -115,14 +116,15 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
 * **`--set-product-suffix` / `--set-category-suffix`** are applied to Default Config and every
   store view, or only to the store given via `--store-id`, using the same write path Magento's own
   `config:set` CLI command uses — so validation (e.g. rejecting `#` or `//`) and Magento's own
-  automatic suffix swap on existing URL Rewrites both run. If either suffix value fails validation,
-  the whole command aborts before any regeneration runs. Since the config is written *before*
+  automatic suffix swap on existing URL Rewrites both run. A suffix locked in `app/etc/config.php` is
+  reported before anything is saved; if either suffix value fails validation, the whole command aborts
+  before any regeneration runs. Since the config is written *before*
   regeneration, in the same command, you get a clean
   `/categorya/oldname.html -> /categorya/newname.html` redirect instead of a two-step chain.
 
-* **Failures and exit code**: if any product/category (or a cleanup step) fails, the run continues with
-  the rest, then prints a `[FAILURES]` summary (counts per entity type plus up to 20 of the failures) and
-  exits with code `1` — after reindex and cache refresh have still run. Earlier versions always exited
+* **Failures and exit code**: if any product/category (or a cleanup, reindex or cache step) fails, the run
+  continues with the rest, then prints a `[FAILURES]` summary (counts per type plus up to 20 of the
+  failures) and exits with code `1` — after reindex and cache refresh have still run. Earlier versions always exited
   `0`, so cron jobs or scripts that check the exit code may start reporting failures that used to be
   hidden.
 
@@ -170,6 +172,30 @@ or
 
 * Set the category URL suffix to `.html` and regenerate all category URLs in one step:
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=category --set-category-suffix=.html`
+
+## USE FROM CODE
+
+The same run is available as a service (`@api`), e.g. for cron jobs, queue consumers or integrations —
+inject `OlegKoval\RegenerateUrlRewrites\Api\RegenerateServiceInterface`:
+
+```php
+$options = $this->runOptionsBuilder // OlegKoval\RegenerateUrlRewrites\Model\RunOptionsBuilder
+    ->setEntityType('product')
+    ->setStoreIds([2])          // empty (default): all stores
+    ->setProductIds([38, 39])   // empty (default): all products
+    ->setSaveOldUrls(true)
+    ->setReindex(false)         // reindex and cache refresh are on by default, as in the CLI
+    ->create();
+
+$problems = $this->regenerateService->validate($options); // string[]; run() throws InputException for these
+$result = $this->regenerateService->run($options);
+if ($result->hasFailures()) {
+    // $result->getFailureCounts(), $result->getFailures()
+}
+```
+
+`run()` accepts an optional `Api\ProgressReporterInterface` to receive progress; without one nothing is
+printed.
 
 ## SUPPORT ME
 

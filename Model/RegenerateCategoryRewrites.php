@@ -223,12 +223,10 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         }
 
         $pageCount = $categories->getLastPageNumber();
-        $this->progressBarProgress = 0;
-        $this->progressBarTotal = (int)$categories->getSize();
         $currentPage = 1;
         $this->pendingProductIds = [];
 
-        $this->_showProgress();
+        $this->_progressStart($storeId, (int)$categories->getSize());
         while ($currentPage <= $pageCount) {
             $categories->clear();
             $categories->setCurPage($currentPage);
@@ -240,12 +238,12 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
                     // skip this category (e.g. broken/orphaned category tree) and continue with the rest
                     $this->_addFailure($this->entityType, (int)$category->getId(), $storeId, $e->getMessage());
                 }
-                $this->progressBarProgress++;
-                $this->_showProgress();
+                $this->_progressAdvance();
             }
 
             $currentPage++;
         }
+        $this->_progressFinish();
 
         // products of all processed categories, each regenerated once, after every category's url_path is
         // final (regenerating per category repeated each product once per ancestor category) — in bounded

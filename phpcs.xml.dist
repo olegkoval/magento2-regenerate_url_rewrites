@@ -12,14 +12,7 @@
     <rule ref="Magento2"/>
 
     <!-- Known errors in existing code, exempted per file only (the sniffs still apply everywhere else):
-         shell_exec() reindex/cache calls and the echo-based progress bar go away when reindex/cache move to
-         Magento services and progress output to a reporter; the constructor \Proxy type hints move to di.xml. -->
-    <rule ref="Magento2.Security.InsecureFunction">
-        <exclude-pattern>Console/Command/RegenerateUrlRewritesAbstract.php</exclude-pattern>
-    </rule>
-    <rule ref="Magento2.Security.LanguageConstruct">
-        <exclude-pattern>Model/AbstractRegenerateRewrites.php</exclude-pattern>
-    </rule>
+         the constructor \Proxy type hints move to di.xml. -->
     <rule ref="Magento2.Classes.DiscouragedDependencies">
         <exclude-pattern>Console/Command/RegenerateUrlRewritesAbstract.php</exclude-pattern>
         <exclude-pattern>Model/RegenerateCategoryRewrites.php</exclude-pattern>
