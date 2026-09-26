@@ -13,6 +13,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
   code may now start alerting on failures that used to be hidden.
 
 ### Fixed
+- `--add-sku-to-url` (and path clean-up/de-duplication in general) no longer alters custom URL
+  rewrites: admin-created rewrites, and old-URL redirects kept by `--save-old-urls`, keep their exact
+  request path. Before, `--add-sku-to-url` appended the SKU to them too, so a custom URL like
+  `promo/sale` became `promo/sale-<sku>` and the original URL stopped working.
+- with `--add-sku-to-url`, custom redirects (and `--save-old-urls` redirects) pointing at a product's URL
+  now follow it to the SKU-suffixed URL; before, they kept pointing at the old unsuffixed URL, which no
+  longer existed (redirect to a 404)
 - a product/category whose generated URL paths were all empty no longer has its existing rewrites
   touched (nothing to write, so the current rewrites are kept)
 

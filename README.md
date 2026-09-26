@@ -93,7 +93,7 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
 | `--product-id=<id>` | Regenerate for one specific product. |
 | `--products-range=<from>-<to>` | Regenerate for a range of product IDs (gaps in the range are handled automatically). |
 | `--include-not-visible` | Also regenerate URLs for products with visibility "Not Visible Individually" (e.g. configurable child products) — excluded by default. |
-| `--add-sku-to-url` | Append the product's SKU as a URL segment, e.g. `screws.html` → `screws-2244000004.html`. |
+| `--add-sku-to-url` | Append the product's SKU as a URL segment, e.g. `screws.html` → `screws-2244000004.html`. Custom (admin-created) rewrites and kept old-URL redirects are left unchanged. |
 | `--set-product-suffix=<suffix>` | Set the product URL suffix (e.g. `.html`) before regenerating. See [Notes & Caveats](#notes--caveats). |
 
 #### Category targeting & options
