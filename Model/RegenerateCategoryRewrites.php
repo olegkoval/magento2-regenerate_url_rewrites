@@ -133,6 +133,42 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     }
 
     /**
+     * Category failures plus those of products regenerated through this category run
+     *
+     * @return array<int, array{entity_type: string, entity_id: int|null, store_id: int|null, message: string}>
+     */
+    public function getFailures(): array
+    {
+        return array_merge(parent::getFailures(), $this->regenerateProductRewrites->getFailures());
+    }
+
+    /**
+     * Category failure counts plus those of products regenerated through this category run
+     *
+     * @return array<string, int>
+     */
+    public function getFailureCounts(): array
+    {
+        $counts = parent::getFailureCounts();
+        foreach ($this->regenerateProductRewrites->getFailureCounts() as $entityType => $count) {
+            $counts[$entityType] = ($counts[$entityType] ?? 0) + $count;
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @return $this
+     */
+    public function resetFailures(): static
+    {
+        parent::resetFailures();
+        $this->regenerateProductRewrites->resetFailures();
+
+        return $this;
+    }
+
+    /**
      * Regenerate Url Rewrites of all categories
      *
      * @param int $storeId
@@ -171,7 +207,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         try {
             $categories = $this->_getCategoriesCollection($categoriesFilter, $storeId);
         } catch (LocalizedException $e) {
-            // could not build the categories collection at all - nothing to process
+            $this->_addFailure($this->entityType, null, $storeId, 'loading categories failed: ' . $e->getMessage());
             return $this;
         }
 
@@ -190,6 +226,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
                     $this->categoryProcess($category, $storeId);
                 } catch (\Exception $e) {
                     // skip this category (e.g. broken/orphaned category tree) and continue with the rest
+                    $this->_addFailure($this->entityType, (int)$category->getId(), $storeId, $e->getMessage());
                 }
                 $this->progressBarProgress++;
                 $this->_showProgress();
@@ -266,6 +303,12 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $categoryUrlRewriteResult = $this->_getCategoryUrlRewriteGenerator()->generate($category, true);
         } catch (\Exception $e) {
             $categoryUrlRewriteResult = null;
+            $this->_addFailure(
+                $this->entityType,
+                (int)$category->getId(),
+                $storeId,
+                'generating URL rewrites failed: ' . $e->getMessage()
+            );
         }
         if (!empty($categoryUrlRewriteResult)) {
             $this->saveUrlRewrites($categoryUrlRewriteResult);

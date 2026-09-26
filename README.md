@@ -120,6 +120,12 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
   regeneration, in the same command, you get a clean
   `/categorya/oldname.html -> /categorya/newname.html` redirect instead of a two-step chain.
 
+* **Failures and exit code**: if any product/category (or a cleanup step) fails, the run continues with
+  the rest, then prints a `[FAILURES]` summary (counts per entity type plus up to 20 of the failures) and
+  exits with code `1` — after reindex and cache refresh have still run. Earlier versions always exited
+  `0`, so cron jobs or scripts that check the exit code may start reporting failures that used to be
+  hidden.
+
 * **`--regen-url-key`** inverted its default behavior in 1.8.0: `url_key` is no longer regenerated
   automatically. Pass `--regen-url-key` explicitly whenever you want it regenerated too — see
   [Deprecated Options](#deprecated-options) if you're upgrading from an older version.

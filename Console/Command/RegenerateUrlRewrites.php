@@ -21,6 +21,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 {
     /**
+     * Max failures listed individually in the end-of-run summary (the rest are counted)
+     */
+    private const FAILURE_SUMMARY_LIMIT = 20;
+
+    /**
      * @var null|InputInterface
      */
     protected ?InputInterface $_input = null;
@@ -199,6 +204,11 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             return Command::FAILURE;
         }
 
+        $regenerator = $this->_commandOptions['entityType'] == self::INPUT_KEY_REGENERATE_ENTITY_TYPE_CATEGORY
+            ? $this->regenerateCategoryRewrites
+            : $this->regenerateProductRewrites;
+        $regenerator->resetFailures();
+
         foreach ($this->_commandOptions['storesList'] as $storeId => $storeCode) {
             $this->_output->writeln('');
             $this->_output->writeln("[Type: {$this->_commandOptions['entityType']}, Store ID: {$storeId}, Store View code: {$storeCode}]:");
@@ -232,9 +242,48 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         $this->_runClearCache();
 
         $this->_showSupportMe();
+
+        $failureCounts = $regenerator->getFailureCounts();
+        if (count($failureCounts) > 0) {
+            $this->_displayFailures($failureCounts, $regenerator->getFailures());
+            $this->_output->writeln('Finished with failures');
+
+            return Command::FAILURE;
+        }
+
         $this->_output->writeln('Finished');
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Print failure counts per entity type and up to FAILURE_SUMMARY_LIMIT of the retained failures
+     *
+     * @param array<string, int> $failureCounts exact totals per entity type
+     * @param array<int, array{entity_type: string, entity_id: int|null, store_id: int|null, message: string}> $failures
+     *        retained details (may be fewer than the totals)
+     * @return void
+     */
+    private function _displayFailures(array $failureCounts, array $failures): void
+    {
+        $countParts = [];
+        foreach ($failureCounts as $entityType => $count) {
+            $countParts[] = "{$count} {$entityType} failure(s)";
+        }
+
+        $this->_output->writeln('[FAILURES] ' . implode(', ', $countParts) . ':');
+        foreach (array_slice($failures, 0, self::FAILURE_SUMMARY_LIMIT) as $failure) {
+            $subject = $failure['entity_type']
+                . ($failure['entity_id'] !== null ? " {$failure['entity_id']}" : '')
+                . ($failure['store_id'] !== null ? " (store {$failure['store_id']})" : '');
+            $this->_output->writeln("  {$subject}: {$failure['message']}");
+        }
+
+        $hidden = array_sum($failureCounts) - min(count($failures), self::FAILURE_SUMMARY_LIMIT);
+        if ($hidden > 0) {
+            $this->_output->writeln("  ...and {$hidden} more");
+        }
+        $this->_output->writeln('');
     }
 
     /**

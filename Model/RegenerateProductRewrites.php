@@ -246,7 +246,7 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
                 );
             }
         } catch (\Exception $e) {
-            // go to the next product
+            $this->_addFailure($this->entityType, (int)$entity->getId(), $storeId, $e->getMessage());
         }
 
         $this->progressBarProgress++;

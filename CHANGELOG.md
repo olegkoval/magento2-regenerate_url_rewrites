@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Changed
+- the command now reports failures instead of silently skipping them: products/categories whose URL
+  rewrites couldn't be generated or saved (and failed cleanup steps) are listed in an end-of-run summary —
+  counts per entity type plus up to 20 of the failures — and the command **exits with code 1**. Reindex and
+  cache refresh still run first. Previously it always exited 0, so cron jobs/scripts that check the exit
+  code may now start alerting on failures that used to be hidden.
+
+### Fixed
+- a product/category whose generated URL paths were all empty no longer has its existing rewrites
+  touched (nothing to write, so the current rewrites are kept)
+
 ## [1.9.1] - 2026-08-26
 ### Added
 - new options `--set-product-suffix` / `--set-category-suffix` — set the product/category URL suffix

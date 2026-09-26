@@ -77,6 +77,24 @@ abstract class AbstractRegenerateRewrites
     ];
 
     /**
+     * Max failure details retained; beyond it only counts grow, so a systemic error on a large catalog
+     * can't exhaust memory
+     */
+    protected const FAILURE_DETAILS_LIMIT = 1000;
+
+    /**
+     * First FAILURE_DETAILS_LIMIT failures collected since the last resetFailures() call
+     * @var array<int, array{entity_type: string, entity_id: int|null, store_id: int|null, message: string}>
+     */
+    protected array $failures = [];
+
+    /**
+     * Exact failure count per entity type since the last resetFailures() call
+     * @var array<string, int>
+     */
+    protected array $failureCounts = [];
+
+    /**
      * @var RegenerateHelper
      */
     protected $helper;
@@ -120,6 +138,65 @@ abstract class AbstractRegenerateRewrites
     abstract function regenerate(int $storeId = 0);
 
     /**
+     * First FAILURE_DETAILS_LIMIT failures since the last resetFailures() call (see getFailureCounts() for totals)
+     *
+     * @return array<int, array{entity_type: string, entity_id: int|null, store_id: int|null, message: string}>
+     */
+    public function getFailures(): array
+    {
+        return $this->failures;
+    }
+
+    /**
+     * Exact failure count per entity type since the last resetFailures() call
+     *
+     * @return array<string, int>
+     */
+    public function getFailureCounts(): array
+    {
+        return $this->failureCounts;
+    }
+
+    /**
+     * Clear collected failures
+     *
+     * Never called from inside a run: the command calls regenerate() once per store and the category
+     * model reuses the product model per category, so an implicit reset would drop earlier failures.
+     *
+     * @return $this
+     */
+    public function resetFailures(): static
+    {
+        $this->failures = [];
+        $this->failureCounts = [];
+
+        return $this;
+    }
+
+    /**
+     * @param string $entityType
+     * @param int|null $entityId null for a failure not tied to a single entity (e.g. a cleanup step)
+     * @param int|null $storeId
+     * @param string $message
+     * @return void
+     */
+    protected function _addFailure(string $entityType, ?int $entityId, ?int $storeId, string $message): void
+    {
+        $this->failureCounts[$entityType] = ($this->failureCounts[$entityType] ?? 0) + 1;
+
+        if (count($this->failures) >= static::FAILURE_DETAILS_LIMIT) {
+            return;
+        }
+
+        $this->failures[] = [
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'store_id' => $storeId,
+            'message' => $message,
+        ];
+    }
+
+    /**
      * Return resource connection
      * @return ResourceConnection
      */
@@ -139,6 +216,12 @@ abstract class AbstractRegenerateRewrites
     public function saveUrlRewrites(array $urlRewrites, array $entityData = [], string $urlSegmentToAppend = ''): static
     {
         $data = $this->_prepareUrlRewrites($urlRewrites, $urlSegmentToAppend);
+
+        // every generated path was empty: nothing to write, so keep the current rewrites (an empty
+        // insertOnDuplicate() builds column-less SQL, which either fails or commits after the delete)
+        if (empty($data)) {
+            return $this;
+        }
 
         if (!$this->regenerateOptions['saveOldUrls'] && empty($entityData) && !empty($data)) {
             $entityData = $data;
@@ -162,6 +245,20 @@ abstract class AbstractRegenerateRewrites
 
         } catch (\Exception $e) {
             $connection->rollBack();
+
+            // one failure per entity whose rewrites were not saved (a category call can include children)
+            $failed = [];
+            foreach ($entityData ?: $data as $row) {
+                $failed[$row['entity_type'] . '|' . $row['entity_id'] . '|' . $row['store_id']] = $row;
+            }
+            foreach ($failed as $row) {
+                $this->_addFailure(
+                    (string)$row['entity_type'],
+                    (int)$row['entity_id'],
+                    (int)$row['store_id'],
+                    'saving URL rewrites failed: ' . $e->getMessage()
+                );
+            }
         }
 
         return $this;
@@ -306,6 +403,7 @@ abstract class AbstractRegenerateRewrites
 
         } catch (\Exception $e) {
             $connection->rollBack();
+            $this->_addFailure($this->entityType, null, null, 'deleting orphaned rewrites failed: ' . $e->getMessage());
         }
 
         return $this;
@@ -328,6 +426,12 @@ abstract class AbstractRegenerateRewrites
 
         } catch (\Exception $e) {
             $this->_getResourceConnection()->getConnection()->rollBack();
+            $this->_addFailure(
+                $this->entityType,
+                null,
+                null,
+                'cleaning the product/category rewrite table failed: ' . $e->getMessage()
+            );
         }
 
         $select = $this->_getResourceConnection()->getConnection()->select()
@@ -343,7 +447,18 @@ abstract class AbstractRegenerateRewrites
             )
             ->where('metadata LIKE \'{"category_id":"%"}\'')
             ->where("url_rewrite_id NOT IN (SELECT url_rewrite_id FROM {$this->_getSecondaryTableName()})");
-        $data = $this->_getResourceConnection()->getConnection()->fetchAll($select);
+        try {
+            $data = $this->_getResourceConnection()->getConnection()->fetchAll($select);
+        } catch (\Exception $e) {
+            $this->_addFailure(
+                $this->entityType,
+                null,
+                null,
+                'reading rewrites for the product/category rewrite table failed: ' . $e->getMessage()
+            );
+
+            return $this;
+        }
 
         if (!empty($data)) {
             // I'm using row-by-row inserts because some products/categories not exists in entity tables but Url Rewrites
