@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
   code may now start alerting on failures that used to be hidden.
 
 ### Fixed
+- `--save-old-urls` now actually creates 301 redirects: when a URL changes, the old URL redirects to the
+  new one. Before, the old URL kept serving the page as an ordinary rewrite (duplicate content) and the
+  redirect Magento generated was silently dropped when saving (#174, #142). This includes switching to
+  `--add-sku-to-url` with `--save-old-urls`: the old unsuffixed URL now redirects to the SKU URL
 - `--add-sku-to-url` (and path clean-up/de-duplication in general) no longer alters custom URL
   rewrites: admin-created rewrites, and old-URL redirects kept by `--save-old-urls`, keep their exact
   request path. Before, `--add-sku-to-url` appended the SKU to them too, so a custom URL like

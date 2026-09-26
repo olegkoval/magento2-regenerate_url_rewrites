@@ -229,20 +229,25 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
                 $storeId
             );
 
+            // append the product's SKU as an extra URL segment, e.g. screws.html -> screws-2244000004.html
+            // (see #140). Set on the in-memory url_key only (after updateAttributes(), so never saved) and
+            // before generation, so Magento's generator itself builds the history 301s (--save-old-urls) and
+            // custom-redirect targets for the URL that is actually saved
+            if ($this->regenerateOptions['addSkuToUrl']) {
+                $urlKey = $this->_getProductUrlPathGenerator()->getUrlKey($entity);
+                $skuSegment = $this->helper->sanitizeSkuForUrl((string)$entity->getSku());
+                if ($urlKey !== null && $skuSegment !== '') {
+                    $entity->setUrlKey($urlKey . '-' . $skuSegment);
+                }
+            }
+
             $urlRewrites = $this->_getProductUrlRewriteGenerator()->generate($entity);
             $urlRewrites = $this->helper->sanitizeProductUrlRewrites($urlRewrites);
 
             if (!empty($urlRewrites)) {
-                // append the product's SKU as an extra URL segment, e.g. screws.html ->
-                // screws-2244000004.html (see #140)
-                $skuSegment = $this->regenerateOptions['addSkuToUrl']
-                    ? $this->helper->sanitizeSkuForUrl($entity->getSku())
-                    : '';
-
                 $this->saveUrlRewrites(
                     $urlRewrites,
-                    [['entity_type' => $this->entityType, 'entity_id' => $entity->getId(), 'store_id' => $storeId]],
-                    $skuSegment
+                    [['entity_type' => $this->entityType, 'entity_id' => $entity->getId(), 'store_id' => $storeId]]
                 );
             }
         } catch (\Exception $e) {
