@@ -93,7 +93,7 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
 |---|---|
 | `--product-id=<id>` | Regenerate for one specific product. |
 | `--products-range=<from>-<to>` | Regenerate for a range of product IDs (gaps in the range are handled automatically). |
-| `--include-not-visible` | Also regenerate URLs for products with visibility "Not Visible Individually" (e.g. configurable child products) — excluded by default. |
+| `--include-not-visible` | Also process products with visibility "Not Visible Individually" (e.g. configurable child products) — excluded by default. See [Notes & Caveats](#notes--caveats). |
 | `--add-sku-to-url` | Append the product's SKU as a URL segment, e.g. `screws.html` → `screws-2244000004.html`. Custom (admin-created) rewrites and kept old-URL redirects are left unchanged. |
 | `--set-product-suffix=<suffix>` | Set the product URL suffix (e.g. `.html`) before regenerating. See [Notes & Caveats](#notes--caveats). |
 
@@ -127,6 +127,12 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
   failures) and exits with code `1` — after reindex and cache refresh have still run. Earlier versions always exited
   `0`, so cron jobs or scripts that check the exit code may start reporting failures that used to be
   hidden.
+
+* **`--include-not-visible`** makes the run process "Not Visible Individually" products too — e.g. their
+  `url_key` is regenerated with `--regen-url-key` — but it can't give them URL rewrites: Magento's own
+  generator creates none for a product that isn't visible in any store view. (Since Magento 2.4.7 a product
+  hidden by default but visible in some store view does get rewrites for that store view — every run
+  includes it there anyway; `--store-id=0` runs need this option for it.)
 
 * **`--regen-url-key`** inverted its default behavior in 1.8.0: `url_key` is no longer regenerated
   automatically. Pass `--regen-url-key` explicitly whenever you want it regenerated too — see

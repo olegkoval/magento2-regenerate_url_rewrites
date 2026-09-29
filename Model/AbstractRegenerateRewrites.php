@@ -13,6 +13,7 @@ namespace OlegKoval\RegenerateUrlRewrites\Model;
 use OlegKoval\RegenerateUrlRewrites\Api\ProgressReporterInterface;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\Model\AbstractModel;
 use Magento\UrlRewrite\Model\Storage\DbStorage;
 use Magento\CatalogUrlRewrite\Model\ResourceModel\Category\Product as ProductUrlRewriteResource;
 
@@ -598,6 +599,29 @@ abstract class AbstractRegenerateRewrites
             $select->where('store_id = ?', $storeId);
         }
         return (bool)$this->_getResourceConnection()->getConnection()->fetchOne($select);
+    }
+
+    /**
+     * Remove a store-level url_key so the store inherits the default-scope one — for a regenerated key equal to the
+     * default: not writing it avoids a redundant override (see #92), but a stale override left in place would
+     * disagree with the URL just generated from the regenerated key
+     *
+     * @param AbstractModel $entity product/category as loaded by its collection (incl. its link field)
+     * @param int $storeId a store view, not 0
+     * @return void
+     */
+    protected function _deleteStoreUrlKey(AbstractModel $entity, int $storeId): void
+    {
+        $resource = $entity->getResource();
+        $attribute = $resource->getAttribute('url_key');
+        // the link field (row_id on Adobe Commerce, entity_id otherwise), as Magento's own EAV writes use
+        $linkField = $resource->getLinkField();
+
+        $resource->getConnection()->delete($attribute->getBackend()->getTable(), [
+            'attribute_id = ?' => (int)$attribute->getId(),
+            $linkField . ' = ?' => (int)$entity->getData($linkField),
+            'store_id = ?' => $storeId,
+        ]);
     }
 
     /**

@@ -204,6 +204,7 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
         // see logic in a core Product Url model: \Magento\Catalog\Model\Product\Url::getUrl()
         // if "request_path" is not null or equal to "false" then Magento do not search and do not use Url Rewrites
         $updateAttributes = ['url_path' => null];
+        $inheritDefaultUrlKey = false;
         if ($this->regenerateOptions['regenUrlKey']) {
             $originalUrlKey = $entity->getUrlKey();
             $generatedKey = $this->_getProductUrlPathGenerator()->getUrlKey($entity->setUrlKey(null));
@@ -220,6 +221,8 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
 
                 if ($storeId == 0 || $generatedKey !== $this->_getDefaultScopeUrlKey($entity->getId())) {
                     $updateAttributes['url_key'] = $generatedKey;
+                } else {
+                    $inheritDefaultUrlKey = true;
                 }
             }
         }
@@ -230,6 +233,9 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
                 $updateAttributes,
                 $storeId
             );
+            if ($inheritDefaultUrlKey) {
+                $this->_deleteStoreUrlKey($entity, $storeId);
+            }
 
             // store 0 in an all-stores run only updates the default-scope attributes above: generating here
             // (global scope) would regenerate every store view, which the run then does again per store view

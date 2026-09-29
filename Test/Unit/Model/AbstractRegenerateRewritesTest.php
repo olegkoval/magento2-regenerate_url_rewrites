@@ -248,6 +248,33 @@ class AbstractRegenerateRewritesTest extends TestCase
     }
 
     /**
+     * @return void
+     */
+    public function testStoreUrlKeyDeleteRemovesOnlyThatStoresRowByTheLinkField(): void
+    {
+        $backend = $this->createMock(\Magento\Eav\Model\Entity\Attribute\Backend\AbstractBackend::class);
+        $backend->method('getTable')->willReturn('catalog_product_entity_varchar');
+        $attribute = $this->createMock(\Magento\Eav\Model\Entity\Attribute\AbstractAttribute::class);
+        $attribute->method('getId')->willReturn('121');
+        $attribute->method('getBackend')->willReturn($backend);
+        $connection = $this->createMock(AdapterInterface::class);
+        $connection->expects(self::once())->method('delete')->with('catalog_product_entity_varchar', [
+            'attribute_id = ?' => 121,
+            'row_id = ?' => 905,
+            'store_id = ?' => 2,
+        ]);
+        $resource = $this->createMock(\Magento\Catalog\Model\ResourceModel\Product::class);
+        $resource->method('getAttribute')->with('url_key')->willReturn($attribute);
+        $resource->method('getLinkField')->willReturn('row_id');
+        $resource->method('getConnection')->willReturn($connection);
+        $product = $this->createMock(\Magento\Catalog\Model\Product::class);
+        $product->method('getResource')->willReturn($resource);
+        $product->method('getData')->with('row_id')->willReturn('905');
+
+        $this->invoke('_deleteStoreUrlKey', $product, 2);
+    }
+
+    /**
      * @param int $storeId
      * @param string $requestPath
      * @param string $entityType

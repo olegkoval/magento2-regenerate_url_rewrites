@@ -17,8 +17,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
   use the run's own memory limit (e.g. `php -d memory_limit=-1 bin/magento ...`), which the spawned processes
   didn't inherit, and a failing or locked indexer is now reported in the `[FAILURES]` summary (exit code 1)
   instead of being ignored
+- `--include-not-visible` help and README now say what the option does: "Not Visible Individually" products are
+  processed too (e.g. `url_key` regeneration), but Magento creates no URL rewrites for a product that isn't
+  visible in any store view — the option never could add those
 - a `--set-product-suffix`/`--set-category-suffix` value locked in `app/etc/config.php` is now reported before
   anything is saved; before, the other suffix was still saved and then the run aborted
+
+### Fixed
+- `--regen-url-key` for a store view left a stale store-level `url_key` in place when the regenerated key was
+  the same as the default one (it only skipped writing a redundant copy, see #92): the rewrite used the new key
+  but the product/category kept the old one, and the next run without `--regen-url-key` switched the URL back.
+  The store-level value is now removed, so the store view inherits the default
 
 ## [1.10.0] - 2026-09-26
 ### Changed

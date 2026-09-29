@@ -139,7 +139,9 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     self::INPUT_KEY_INCLUDE_NOT_VISIBLE,
                     null,
                     InputOption::VALUE_NONE,
-                    'Also regenerate URLs for products with visibility "Not Visible Individually" (e.g. configurable child products).'
+                    'Also process products with visibility "Not Visible Individually" (e.g. their url_key with'
+                    . ' --regen-url-key). Magento itself creates no URL rewrites for a product not visible in'
+                    . ' any store view.'
                 ),
                 new InputOption(
                     self::INPUT_KEY_ADD_SKU_TO_URL,

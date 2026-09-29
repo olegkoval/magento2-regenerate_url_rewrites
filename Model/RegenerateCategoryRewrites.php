@@ -311,6 +311,8 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
 
                 if ($storeId == 0 || $generatedKey !== $this->_getDefaultScopeUrlKey($category->getId())) {
                     $category->getResource()->saveAttribute($category, 'url_key');
+                } else {
+                    $this->_deleteStoreUrlKey($category, $storeId);
                 }
             }
         }
