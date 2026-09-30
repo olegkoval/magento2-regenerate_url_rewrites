@@ -237,7 +237,10 @@ This extension follows [Semantic Versioning](https://semver.org/). Within 1.x:
   `Api\Data\RunOptionsInterface`, `Api\Data\RunResultInterface`, `Api\Data\ChangeInterface`) may gain methods
   or optional parameters in minor releases, so don't implement them yourself (a plugin on the service is fine).
   The keys of the rewrite arrays in `ChangeInterface` stay the same.
-* The models (`Model\Regenerate*Rewrites`) are internal: use the service instead.
+* `Helper\Regenerate::sanitizeSkuForUrl()` (how `--add-sku-to-url` turns a SKU into a URL segment) stays, and the
+  classes the command's constructor takes (`Helper\Regenerate`, `Model\RegenerateProductRewrites`,
+  `Model\RegenerateCategoryRewrites`) keep their names, so subclasses calling `parent::__construct()` keep working.
+* Otherwise the models (`Model\Regenerate*Rewrites`) are internal: use the service instead.
 
 ## SUPPORT ME
 
