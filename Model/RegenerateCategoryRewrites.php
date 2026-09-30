@@ -12,6 +12,9 @@ namespace OlegKoval\RegenerateUrlRewrites\Model;
 
 use Magento\Catalog\Model\ResourceModel\Category\Collection;
 use Magento\Framework\Exception\LocalizedException;
+use OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface;
+use OlegKoval\RegenerateUrlRewrites\Api\Data\ChangeInterface;
+use OlegKoval\RegenerateUrlRewrites\Api\ProgressReporterInterface;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
 use Magento\CatalogUrlRewrite\Model\Map\DatabaseMapPool;
@@ -85,6 +88,20 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
      * @var array<int, true>
      */
     protected array $pendingProductIds = [];
+
+    /**
+     * IDs (as keys) of the categories whose url_path the current run changed, in any store so far: store 0 of an
+     * all-stores run changes the default url_path, which the store views then inherit — unchanged there, yet their
+     * descendants' store-view rewrites still need the new path
+     * @var array<int, true>
+     */
+    protected array $changedUrlPathIds = [];
+
+    /**
+     * What the progress reporter or change listener threw during the product phase: a stop, never a batch failure
+     * @var \Throwable|null
+     */
+    protected ?\Throwable $reporterException = null;
 
     /**
      * @param RegenerateHelper $helper
@@ -171,6 +188,38 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     /**
      * @return $this
      */
+    public function startRun(): static
+    {
+        parent::startRun();
+        $this->changedUrlPathIds = [];
+
+        return $this;
+    }
+
+    /**
+     * Category counts plus those of products regenerated through this category run
+     *
+     * @return array<string, array<int, int>>
+     */
+    public function getProcessedCounts(): array
+    {
+        return array_merge(parent::getProcessedCounts(), $this->regenerateProductRewrites->getProcessedCounts());
+    }
+
+    /**
+     * @return $this
+     */
+    public function resetProcessedCounts(): static
+    {
+        parent::resetProcessedCounts();
+        $this->regenerateProductRewrites->resetProcessedCounts();
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
     public function resetFailures(): static
     {
         parent::resetFailures();
@@ -222,53 +271,38 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             return $this;
         }
 
-        $pageCount = $categories->getLastPageNumber();
-        $currentPage = 1;
         $this->pendingProductIds = [];
 
-        $this->_progressStart($storeId, (int)$categories->getSize());
-        while ($currentPage <= $pageCount) {
-            $categories->clear();
-            $categories->setCurPage($currentPage);
+        try {
+            $processedIds = $this->_processCategories($categories, $storeId);
 
-            foreach ($categories as $category) {
+            // exact mode: a descendant's url_path is built from its ancestors', so the descendants of a category whose
+            // path changed are processed too — to update their paths, not their url_keys
+            if ($this->regenerateOptions['exactCategories'] && count($this->changedUrlPathIds) > 0) {
+                $options = $this->regenerateOptions;
+                $this->regenerateOptions['regenUrlKey'] = false;
                 try {
-                    $this->categoryProcess($category, $storeId);
-                } catch (\Exception $e) {
-                    // skip this category (e.g. broken/orphaned category tree) and continue with the rest
-                    $this->_addFailure($this->entityType, (int)$category->getId(), $storeId, $e->getMessage());
-                }
-                $this->_progressAdvance();
-            }
-
-            $currentPage++;
-        }
-        $this->_progressFinish();
-
-        // products of all processed categories, each regenerated once, after every category's url_path is
-        // final (regenerating per category repeated each product once per ancestor category) — in bounded
-        // batches so no single collection/SQL IN list spans the whole catalog; one table sync below covers all
-        if (!empty($this->pendingProductIds)) {
-            $options = $this->regenerateOptions;
-            $options['showProgress'] = false;
-            $options['skipSecondaryTableUpdate'] = true;
-            $this->regenerateProductRewrites->setRegenerateOptions($options);
-
-            $batch = [];
-            foreach ($this->pendingProductIds as $productId => $unused) {
-                $batch[] = $productId;
-                if (count($batch) === self::PRODUCT_BATCH_SIZE) {
-                    $this->_regenerateProductsBatch($batch, $storeId);
-                    $batch = [];
+                    $this->_processCategories(
+                        $this->_getDescendantsCollection(array_keys($this->changedUrlPathIds), $processedIds, $storeId),
+                        $storeId
+                    );
+                } finally {
+                    $this->regenerateOptions = $options;
                 }
             }
-            if (!empty($batch)) {
-                $this->_regenerateProductsBatch($batch, $storeId);
+
+            // products of all processed categories, each regenerated once, after every category's url_path is
+            // final (regenerating per category repeated each product once per ancestor category) — in bounded
+            // batches so no single collection/SQL IN list spans the whole catalog; one table sync below covers all
+            if (!empty($this->pendingProductIds)) {
+                $this->_regenerateProducts($storeId);
             }
+        } finally {
+            // also when a run is stopped (an exception from the progress reporter): products still queued are
+            // dropped, and the rows saved so far get their product/category table entries
             $this->pendingProductIds = [];
+            $this->_updateSecondaryTable();
         }
-
-        $this->_updateSecondaryTable();
 
         return $this;
     }
@@ -294,42 +328,54 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $category->setData('save_rewrites_history', true);
         }
 
-        if ($this->regenerateOptions['regenUrlKey']) {
-            $originalUrlKey = $category->getUrlKey();
-            $category->setOrigData('url_key', null);
-            $generatedKey = $this->_getCategoryUrlPathGenerator()->getUrlKey($category->setUrlKey(null));
+        $scopes = array_unique([0, $storeId]);
+        $before = $this->changeListener !== null ? $this->_readUrlAttributes($category, $scopes) : null;
+        try {
+            if ($this->regenerateOptions['regenUrlKey']) {
+                $originalUrlKey = $category->getUrlKey();
+                $category->setOrigData('url_key', null);
+                $generatedKey = $this->_getCategoryUrlPathGenerator()->getUrlKey($category->setUrlKey(null));
 
-            // don't write a blank url_key when Magento's own transliteration can't handle the title
-            // (see #89), and don't write a redundant per-store override if it's identical to the
-            // default-scope value (see #92)
-            if (trim($generatedKey) === '') {
-                // restore the category's original url_key so the rewrite generation below still
-                // produces the existing (working) path instead of a blank/broken one
-                $category->setUrlKey($originalUrlKey);
-            } else {
-                $category->setUrlKey($generatedKey);
-
-                if ($storeId == 0 || $generatedKey !== $this->_getDefaultScopeUrlKey($category->getId())) {
-                    $category->getResource()->saveAttribute($category, 'url_key');
+                // don't write a blank url_key when Magento's own transliteration can't handle the title
+                // (see #89), and don't write a redundant per-store override if it's identical to the
+                // default-scope value (see #92)
+                if (trim($generatedKey) === '') {
+                    // restore the category's original url_key so the rewrite generation below still
+                    // produces the existing (working) path instead of a blank/broken one
+                    $category->setUrlKey($originalUrlKey);
                 } else {
-                    $this->_deleteStoreUrlKey($category, $storeId);
+                    $category->setUrlKey($generatedKey);
+
+                    if ($storeId == 0 || $generatedKey !== $this->_getDefaultScopeUrlKey($category->getId())) {
+                        $category->getResource()->saveAttribute($category, 'url_key');
+                    } else {
+                        $this->_deleteStoreUrlKey($category, $storeId);
+                    }
                 }
             }
-        }
 
-        // clear the inherited url_path before generating, otherwise CategoryUrlPathGenerator's
-        // shouldReturnCurrentUrlPath() short-circuits and hands back the default-scope value
-        // instead of recomputing it for this store (see #184)
-        $category->unsUrlPath();
+            // clear the inherited url_path before generating, otherwise CategoryUrlPathGenerator's
+            // shouldReturnCurrentUrlPath() short-circuits and hands back the default-scope value
+            // instead of recomputing it for this store (see #184)
+            $currentUrlPath = $category->getUrlPath();
+            $category->unsUrlPath();
 
-        try {
-            $urlPath = $this->_getCategoryUrlPathGenerator()->getUrlPath($category);
-        } catch (LocalizedException $e) {
-            $urlPath = null;
-        }
-        if (!empty($urlPath)) {
-            $category->setUrlPath($urlPath);
-            $category->getResource()->saveAttribute($category, 'url_path');
+            try {
+                $urlPath = $this->_getCategoryUrlPathGenerator()->getUrlPath($category);
+            } catch (LocalizedException $e) {
+                $urlPath = null;
+            }
+            if (!empty($urlPath)) {
+                $category->setUrlPath($urlPath);
+                $category->getResource()->saveAttribute($category, 'url_path');
+                if ($urlPath !== $currentUrlPath) {
+                    $this->changedUrlPathIds[(int)$category->getId()] = true;
+                }
+            }
+        } finally {
+            if ($before !== null) {
+                $this->_queueAttributeChanges($category, $before, $this->_readUrlAttributes($category, $scopes));
+            }
         }
 
         // store 0 in an all-stores run only updates the default-scope url_key/url_path above: generating
@@ -358,7 +404,11 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         // if config option "Use Category Path for Product URLs" is "Yes" then queue this category's products
         // for regeneration at the end of the pass, unless explicitly skipped (see #86)
         if (!$this->regenerateOptions['skipProducts'] && $this->helper->useCategoriesPathForProductUrls($storeId)) {
-            foreach ($this->_getCategoriesProductsIds($category->getAllChildren()) as $productId) {
+            // exact mode: only the category's own products — its descendants are processed only if their path changed
+            $categoryIds = $this->regenerateOptions['exactCategories']
+                ? (string)$category->getId()
+                : $category->getAllChildren();
+            foreach ($this->_getCategoriesProductsIds($categoryIds) as $productId) {
                 $this->pendingProductIds[(int)$productId] = true;
             }
         }
@@ -367,6 +417,201 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         $this->_resetUrlRewritesDataMaps($category);
 
         return $this;
+    }
+
+    /**
+     * @param Collection $categories
+     * @param int $storeId
+     * @return int[] IDs of the categories processed
+     */
+    protected function _processCategories(Collection $categories, int $storeId): array
+    {
+        $processedIds = [];
+        $pageCount = $categories->getLastPageNumber();
+        $currentPage = 1;
+
+        $this->_progressStart($storeId, (int)$categories->getSize());
+        while ($currentPage <= $pageCount) {
+            $categories->clear();
+            $categories->setCurPage($currentPage);
+
+            foreach ($categories as $category) {
+                try {
+                    $this->categoryProcess($category, $storeId);
+                } catch (\Exception $e) {
+                    // skip this category (e.g. broken/orphaned category tree) and continue with the rest
+                    $this->_addFailure($this->entityType, (int)$category->getId(), $storeId, $e->getMessage());
+                }
+                $this->_flushChanges();
+                $processedIds[] = (int)$category->getId();
+                $this->_countProcessed($storeId);
+                $this->_progressAdvance();
+            }
+
+            $currentPage++;
+        }
+        $this->_progressFinish();
+
+        return $processedIds;
+    }
+
+    /**
+     * Regenerate the queued products in batches, reported as one "product" pass so the reporter can follow and stop
+     * this phase as well
+     *
+     * @param int $storeId
+     * @return void
+     */
+    protected function _regenerateProducts(int $storeId): void
+    {
+        $reportProgress = $this->regenerateOptions['showProgress'] && $this->progressReporter !== null;
+        $options = $this->regenerateOptions;
+        $options['showProgress'] = $reportProgress;
+        $options['progressPassStarted'] = true;
+        $options['skipSecondaryTableUpdate'] = true;
+        $this->regenerateProductRewrites->setRegenerateOptions($options);
+
+        $this->reporterException = null;
+        if ($this->changeListener !== null) {
+            $this->regenerateProductRewrites->setChangeListener($this->_getStopTrackingListener());
+        }
+        if ($reportProgress) {
+            $this->progressReporter->start('product', $storeId, count($this->pendingProductIds));
+            $this->regenerateProductRewrites->setProgressReporter($this->_getStopTrackingReporter());
+        }
+
+        try {
+            $batch = [];
+            foreach ($this->pendingProductIds as $productId => $unused) {
+                $batch[] = $productId;
+                if (count($batch) === self::PRODUCT_BATCH_SIZE) {
+                    $this->_regenerateProductsBatch($batch, $storeId);
+                    $batch = [];
+                }
+            }
+            if (!empty($batch)) {
+                $this->_regenerateProductsBatch($batch, $storeId);
+            }
+        } finally {
+            $this->regenerateProductRewrites->setProgressReporter(null);
+            $this->regenerateProductRewrites->setChangeListener(null);
+        }
+
+        if ($reportProgress) {
+            $this->progressReporter->finish();
+        }
+    }
+
+    /**
+     * The change listener, remembering what it throws (see _regenerateProductsBatch())
+     *
+     * @return ChangeListenerInterface
+     */
+    private function _getStopTrackingListener(): ChangeListenerInterface
+    {
+        $listener = $this->changeListener;
+        $track = function (\Throwable $e): void {
+            $this->reporterException = $e;
+        };
+
+        return new class ($listener, $track) implements ChangeListenerInterface {
+            /**
+             * @param ChangeListenerInterface $listener
+             * @param \Closure $track
+             */
+            public function __construct(private ChangeListenerInterface $listener, private \Closure $track)
+            {
+            }
+
+            /**
+             * @param ChangeInterface $change
+             * @return void
+             */
+            public function onChange(ChangeInterface $change): void
+            {
+                try {
+                    $this->listener->onChange($change);
+                } catch (\Throwable $e) {
+                    ($this->track)($e);
+                    throw $e;
+                }
+            }
+        };
+    }
+
+    /**
+     * The progress reporter, remembering what it throws (see _regenerateProductsBatch())
+     *
+     * @return ProgressReporterInterface
+     */
+    private function _getStopTrackingReporter(): ProgressReporterInterface
+    {
+        $reporter = $this->progressReporter;
+        $track = function (\Throwable $e): void {
+            $this->reporterException = $e;
+        };
+
+        return new class ($reporter, $track) implements ProgressReporterInterface {
+            /**
+             * @param ProgressReporterInterface $reporter
+             * @param \Closure $track
+             */
+            public function __construct(private ProgressReporterInterface $reporter, private \Closure $track)
+            {
+            }
+
+            /**
+             * @param string $entityType
+             * @param int $storeId
+             * @param int $total
+             * @return void
+             */
+            public function start(string $entityType, int $storeId, int $total): void
+            {
+                $this->forward(fn () => $this->reporter->start($entityType, $storeId, $total));
+            }
+
+            /**
+             * @param int $steps
+             * @return void
+             */
+            public function advance(int $steps = 1): void
+            {
+                $this->forward(fn () => $this->reporter->advance($steps));
+            }
+
+            /**
+             * @return void
+             */
+            public function finish(): void
+            {
+                $this->forward(fn () => $this->reporter->finish());
+            }
+
+            /**
+             * @param string $text
+             * @param bool $newLine
+             * @return void
+             */
+            public function message(string $text, bool $newLine = true): void
+            {
+                $this->forward(fn () => $this->reporter->message($text, $newLine));
+            }
+
+            /**
+             * @param callable $call
+             * @return void
+             */
+            private function forward(callable $call): void
+            {
+                try {
+                    $call();
+                } catch (\Throwable $e) {
+                    ($this->track)($e);
+                    throw $e;
+                }
+            }
+        };
     }
 
     /**
@@ -379,6 +624,9 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         try {
             $this->regenerateProductRewrites->regenerateProductsRangeUrlRewrites($productIds, $storeId);
         } catch (\Exception $e) {
+            if ($e === $this->reporterException) {
+                throw $e;
+            }
             // a batch that can't even be loaded is reported like any other failure; the run continues
             $this->_addFailure(
                 'product',
@@ -418,7 +666,9 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             $categoriesCollection->addAttributeToFilter('path', array('like' => "1/{$rootCategoryId}/%"));
         }
 
-        if (count($categoriesFilter) > 0) {
+        if (count($categoriesFilter) > 0 && $this->regenerateOptions['exactCategories']) {
+            $categoriesCollection->addAttributeToFilter('entity_id', ['in' => $categoriesFilter]);
+        } elseif (count($categoriesFilter) > 0) {
             // include the targeted categories AND all of their descendants, not just the literal
             // IDs given, so descendant categories' own url_key/url_path also get regenerated
             $orConditions = [
@@ -431,6 +681,30 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
         }
 
         return $categoriesCollection;
+    }
+
+    /**
+     * Every descendant of the given categories, except the excluded ones, shallowest first
+     *
+     * @param int[] $categoryIds
+     * @param int[] $excludeIds
+     * @param int $storeId
+     * @return Collection
+     */
+    protected function _getDescendantsCollection(array $categoryIds, array $excludeIds, int $storeId): Collection
+    {
+        $descendants = $this->_getCategoriesCollection([], $storeId);
+
+        $orConditions = [];
+        foreach ($this->_getCategoriesPaths($categoryIds) as $path) {
+            $orConditions[] = ['attribute' => 'path', 'like' => $path . '/%'];
+        }
+        $descendants->addAttributeToFilter($orConditions);
+        if (count($excludeIds) > 0) {
+            $descendants->addAttributeToFilter('entity_id', ['nin' => $excludeIds]);
+        }
+
+        return $descendants;
     }
 
     /**

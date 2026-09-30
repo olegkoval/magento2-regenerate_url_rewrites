@@ -11,6 +11,8 @@ namespace OlegKoval\RegenerateUrlRewrites\Api\Data;
 /**
  * Immutable options of one regeneration run; build them with \OlegKoval\RegenerateUrlRewrites\Model\RunOptionsBuilder
  *
+ * Implemented only by this module, so it may gain methods in minor releases; don't implement it yourself.
+ *
  * @api
  */
 interface RunOptionsInterface
@@ -37,6 +39,12 @@ interface RunOptionsInterface
      * @return int[] empty: all categories
      */
     public function getCategoryIds(): array;
+
+    /**
+     * @return bool category run: process only the given category IDs; a descendant only when an ancestor's
+     *         url_path changed in the run (then without url_key regeneration)
+     */
+    public function isExactCategories(): bool;
 
     /**
      * @return bool keep old URLs as 301 redirects
@@ -97,4 +105,12 @@ interface RunOptionsInterface
      * @return bool flush all cache storages afterwards
      */
     public function isFlushCache(): bool;
+
+    /**
+     * Every option, keyed by its RunOptionsBuilder name (e.g. to log a run or replay it via
+     * RunOptionsBuilder::fromArray())
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array;
 }

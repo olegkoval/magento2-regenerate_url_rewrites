@@ -11,6 +11,11 @@ namespace OlegKoval\RegenerateUrlRewrites\Api;
 /**
  * Receives the progress of a regeneration run (the CLI draws a progress bar; other callers may log it)
  *
+ * Implement it to receive progress; it never gains methods within 1.x (new hooks come as new interfaces).
+ *
+ * To stop a run, throw from advance() or message(): the run stops after the current entity (whose rewrites are
+ * already saved) and RegenerateServiceInterface::run() rethrows the exception unchanged — see there.
+ *
  * @api
  */
 interface ProgressReporterInterface

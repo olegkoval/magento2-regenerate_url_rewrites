@@ -77,6 +77,30 @@ class RegenerateUrlRewritesTest extends TestCase
     /**
      * @return void
      */
+    public function testProcessedSummaryShowsThePerStoreCountAndTheStoresBeforeFinished(): void
+    {
+        $text = $this->execute(new RunResult([], [], [0, 1, 2], [
+            'category' => [0 => 38, 1 => 38, 2 => 38],
+            'product' => [0 => 2040, 1 => 2040, 2 => 1990],
+        ]))[1];
+
+        self::assertStringEndsWith(
+            "Processed: 38 category(ies), 2040 product(s) in 3 store(s)\nFinished",
+            trim($text)
+        );
+    }
+
+    /**
+     * @return void
+     */
+    public function testProcessedSummaryOfARunWithNothingToProcess(): void
+    {
+        self::assertStringContainsString("Processed: nothing\n", $this->execute(new RunResult([], [], [1], []))[1]);
+    }
+
+    /**
+     * @return void
+     */
     public function testCleanRunExitsWithZero(): void
     {
         [$code, $text] = $this->execute(new RunResult([], [], [0, 1, 2]));
@@ -119,6 +143,21 @@ class RegenerateUrlRewritesTest extends TestCase
         self::assertTrue($options->isSaveOldUrls());
         self::assertFalse($options->isReindex());
         self::assertSame('.htm', $options->getProductUrlSuffix());
+    }
+
+    /**
+     * @return void
+     */
+    public function testExactCategoriesFlagReachesTheRunOptions(): void
+    {
+        $service = $this->execute(new RunResult([], [], []), null, [
+            'entityType' => 'category',
+            'categoryId' => 3,
+            'exactCategories' => true,
+        ])[2];
+
+        self::assertSame([3], $service->options->getCategoryIds());
+        self::assertTrue($service->options->isExactCategories());
     }
 
     /**
@@ -167,11 +206,13 @@ class RegenerateUrlRewritesTest extends TestCase
             /**
              * @param RunOptionsInterface $options
              * @param ProgressReporterInterface|null $reporter
+             * @param \OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface|null $changeListener
              * @return RunResultInterface
              */
             public function run(
                 RunOptionsInterface $options,
-                ?ProgressReporterInterface $reporter = null
+                ?ProgressReporterInterface $reporter = null,
+                ?\OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface $changeListener = null
             ): RunResultInterface {
                 $this->options = $options;
                 if ($this->outcome instanceof InputException) {
@@ -213,6 +254,7 @@ class RegenerateUrlRewritesTest extends TestCase
                 'categoriesFilter' => [],
                 'productsFilter' => [],
                 'categoryId' => null,
+                'exactCategories' => false,
                 'productId' => null,
                 'regenUrlKey' => false,
                 'deleteOrphanedRewrites' => false,

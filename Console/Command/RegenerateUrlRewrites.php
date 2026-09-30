@@ -106,6 +106,13 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     'Specific category ID, e.g.: 123'
                 ),
                 new InputOption(
+                    self::INPUT_KEY_EXACT_CATEGORIES,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'With --category-id/--categories-range: process only those categories, their subcategories only'
+                    . ' if a category\'s URL path changed (and then without regenerating their url_key).'
+                ),
+                new InputOption(
                     self::INPUT_KEY_PRODUCT_ID,
                     null,
                     InputArgument::OPTIONAL,
@@ -205,6 +212,8 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 
         $this->_showSupportMe();
 
+        $this->_output->writeln($this->_getProcessedSummary($result->getProcessedCounts()));
+
         if ($result->hasFailures()) {
             $this->_displayFailures($result->getFailureCounts(), $result->getFailures());
             $this->_output->writeln('Finished with failures');
@@ -215,6 +224,30 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         $this->_output->writeln('Finished');
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * E.g. "Processed: 38 category(ies), 2040 product(s) in 3 store(s)" — per type the largest per-store count
+     * (every store of a run goes through the same entities, store 0 included), not a sum over stores
+     *
+     * @param array<string, array<int, int>> $processedCounts entity type => store ID => count
+     * @return string
+     */
+    private function _getProcessedSummary(array $processedCounts): string
+    {
+        $labels = ['category' => 'category(ies)', 'product' => 'product(s)'];
+        $parts = [];
+        $storeIds = [];
+        foreach ($labels as $entityType => $label) {
+            if (!empty($processedCounts[$entityType])) {
+                $parts[] = max($processedCounts[$entityType]) . ' ' . $label;
+                $storeIds += $processedCounts[$entityType];
+            }
+        }
+
+        return count($parts) === 0
+            ? 'Processed: nothing'
+            : 'Processed: ' . implode(', ', $parts) . ' in ' . count($storeIds) . ' store(s)';
     }
 
     /**
@@ -262,6 +295,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             ->setStoreIds($isAllStoresRun ? [] : array_keys($options['storesList']))
             ->setProductIds($options['productsFilter'] ?: ($options['productId'] ? [$options['productId']] : []))
             ->setCategoryIds($options['categoriesFilter'] ?: ($options['categoryId'] ? [$options['categoryId']] : []))
+            ->setExactCategories($options['exactCategories'] ?? false)
             ->setSaveOldUrls($options['saveOldUrls'])
             ->setRegenUrlKey($options['regenUrlKey'])
             ->setSkipExisting($options['skipExisting'])
@@ -311,6 +345,10 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 
         if (isset($options[self::INPUT_KEY_SKIP_PRODUCTS]) && $options[self::INPUT_KEY_SKIP_PRODUCTS] === true) {
             $this->_commandOptions['skipProducts'] = true;
+        }
+
+        if (isset($options[self::INPUT_KEY_EXACT_CATEGORIES]) && $options[self::INPUT_KEY_EXACT_CATEGORIES] === true) {
+            $this->_commandOptions['exactCategories'] = true;
         }
 
         if (isset($options[self::INPUT_KEY_SKIP_EXISTING]) && $options[self::INPUT_KEY_SKIP_EXISTING] === true) {

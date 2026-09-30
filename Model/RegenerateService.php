@@ -23,6 +23,7 @@ use Magento\Framework\Indexer\StateInterface;
 use Magento\Framework\Phrase;
 use Magento\Indexer\Model\Processor\MakeSharedIndexValid;
 use Magento\Store\Model\StoreManagerInterface;
+use OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface;
 use OlegKoval\RegenerateUrlRewrites\Api\Data\RunOptionsInterface;
 use OlegKoval\RegenerateUrlRewrites\Api\Data\RunResultInterface;
 use OlegKoval\RegenerateUrlRewrites\Api\ProgressReporterInterface;
@@ -208,11 +209,15 @@ class RegenerateService implements RegenerateServiceInterface
     /**
      * @param RunOptionsInterface $options
      * @param ProgressReporterInterface|null $reporter
+     * @param ChangeListenerInterface|null $changeListener
      * @return RunResultInterface
      * @throws InputException
      */
-    public function run(RunOptionsInterface $options, ?ProgressReporterInterface $reporter = null): RunResultInterface
-    {
+    public function run(
+        RunOptionsInterface $options,
+        ?ProgressReporterInterface $reporter = null,
+        ?ChangeListenerInterface $changeListener = null
+    ): RunResultInterface {
         $this->_throwIfErrors($this->validate($options));
         $reporter = $reporter ?? new NullProgressReporter();
 
@@ -222,21 +227,25 @@ class RegenerateService implements RegenerateServiceInterface
             // no area yet (e.g. a plain CLI process): run as the admin does — area code and config scope, so
             // adminhtml plugins/observers and system.xml backend models apply, as before 1.11.0
             return $this->adminhtmlAreaProcessor->process(
-                fn (): RunResultInterface => $this->_run($options, $reporter)
+                fn (): RunResultInterface => $this->_run($options, $reporter, $changeListener)
             );
         }
 
-        return $this->_run($options, $reporter);
+        return $this->_run($options, $reporter, $changeListener);
     }
 
     /**
      * @param RunOptionsInterface $options
      * @param ProgressReporterInterface $reporter
+     * @param ChangeListenerInterface|null $changeListener
      * @return RunResultInterface
      * @throws InputException
      */
-    private function _run(RunOptionsInterface $options, ProgressReporterInterface $reporter): RunResultInterface
-    {
+    private function _run(
+        RunOptionsInterface $options,
+        ProgressReporterInterface $reporter,
+        ?ChangeListenerInterface $changeListener
+    ): RunResultInterface {
         $this->_saveSuffixes($options);
 
         $this->failures = [];
@@ -244,8 +253,9 @@ class RegenerateService implements RegenerateServiceInterface
         $regenerator = $options->getEntityType() === RunOptionsInterface::ENTITY_TYPE_CATEGORY
             ? $this->regenerateCategoryRewrites
             : $this->regenerateProductRewrites;
-        $regenerator->resetFailures();
+        $regenerator->startRun();
         $regenerator->setProgressReporter($reporter);
+        $regenerator->setChangeListener($changeListener);
 
         $isAllStoresRun = count($options->getStoreIds()) === 0;
         $processedStoreIds = [];
@@ -276,6 +286,7 @@ class RegenerateService implements RegenerateServiceInterface
             }
         } finally {
             $regenerator->setProgressReporter(null);
+            $regenerator->setChangeListener(null);
             $this->storeManager->setCurrentStore($callerStoreId);
         }
 
@@ -311,6 +322,7 @@ class RegenerateService implements RegenerateServiceInterface
         return [
             'saveOldUrls' => $options->isSaveOldUrls(),
             'categoriesFilter' => $options->getCategoryIds(),
+            'exactCategories' => $options->isExactCategories(),
             'productsFilter' => $options->getProductIds(),
             'regenUrlKey' => $options->isRegenUrlKey(),
             'showProgress' => true,
@@ -411,7 +423,7 @@ class RegenerateService implements RegenerateServiceInterface
             self::FAILURE_DETAILS_LIMIT
         );
 
-        return new RunResult($counts, $failures, $processedStoreIds);
+        return new RunResult($counts, $failures, $processedStoreIds, $regenerator->getProcessedCounts());
     }
 
     /**

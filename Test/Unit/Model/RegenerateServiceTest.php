@@ -167,6 +167,19 @@ class RegenerateServiceTest extends TestCase
              */
             public bool $hadReporter = false;
 
+            /**
+             * @var \OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface|null
+             */
+            public $hadListener = null;
+
+            /**
+             * @return \OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface|null
+             */
+            public function getListener(): ?\OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface
+            {
+                return $this->changeListener;
+            }
+
             public function __construct()
             {
                 $this->regenerateOptions = $this->defaultRegenerateOptions;
@@ -179,7 +192,9 @@ class RegenerateServiceTest extends TestCase
             public function regenerate(int $storeId = 0): static
             {
                 $this->runs[$storeId] = $this->regenerateOptions;
+                $this->_countProcessed($storeId);
                 $this->hadReporter = $this->progressReporter !== null;
+                $this->hadListener = $this->changeListener;
                 if ($storeId === 2) {
                     $this->_addFailure('product', 5, 2, 'bad');
                 }
@@ -388,6 +403,17 @@ class RegenerateServiceTest extends TestCase
     /**
      * @return void
      */
+    public function testResultHasTheProcessedCountsOfThisRunOnly(): void
+    {
+        $this->service->run($this->options()->create());
+        $result = $this->service->run($this->options()->setStoreIds([1])->create());
+
+        self::assertSame(['product' => [1 => 1]], $result->getProcessedCounts());
+    }
+
+    /**
+     * @return void
+     */
     public function testExplicitStoreZeroRunStillGeneratesGlobally(): void
     {
         $result = $this->service->run($this->options()->setStoreIds([0])->create());
@@ -421,6 +447,61 @@ class RegenerateServiceTest extends TestCase
         self::assertTrue($this->productModel->hadReporter);
         self::assertTrue($this->productModel->orphansDeleted);
         self::assertNull($this->productModel->getReporter());
+    }
+
+    /**
+     * @return void
+     */
+    public function testAnExceptionFromTheReporterStopsTheRunAndIsRethrownUnchanged(): void
+    {
+        $this->indexers = ['catalog' => [StateInterface::STATUS_VALID, null, null]];
+        $stop = new \RuntimeException('stopped by the caller');
+        $reporter = new class ($stop) extends \OlegKoval\RegenerateUrlRewrites\Model\NullProgressReporter {
+            /**
+             * @param \Throwable $stop
+             */
+            public function __construct(private \Throwable $stop)
+            {
+            }
+
+            /**
+             * @param string $text
+             * @param bool $newLine
+             * @return void
+             */
+            public function message(string $text, bool $newLine = true): void
+            {
+                if (str_contains($text, 'Store ID: 1')) {
+                    throw $this->stop;
+                }
+            }
+        };
+
+        try {
+            $this->service->run((new RunOptionsBuilder())->create(), $reporter);
+            self::fail('the reporter exception is expected to propagate');
+        } catch (\RuntimeException $e) {
+            self::assertSame($stop, $e);
+        }
+
+        self::assertSame([0], array_keys($this->productModel->runs), 'stores after the stop are skipped');
+        self::assertSame([], $this->reindexed, 'post-run steps are skipped');
+        self::assertSame([], $this->cacheSteps);
+        self::assertSame(1, end($this->currentStores), "the caller's store is restored");
+        self::assertNull($this->productModel->getReporter());
+    }
+
+    /**
+     * @return void
+     */
+    public function testTheChangeListenerIsAttachedForTheRunOnly(): void
+    {
+        $listener = $this->createMock(\OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface::class);
+
+        $this->service->run($this->options()->setStoreIds([1])->create(), null, $listener);
+
+        self::assertSame($listener, $this->productModel->hadListener);
+        self::assertNull($this->productModel->getListener());
     }
 
     /**

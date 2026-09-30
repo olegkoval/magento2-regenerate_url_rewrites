@@ -26,6 +26,7 @@ class RunOptionsBuilder
         'storeIds' => [],
         'productIds' => [],
         'categoryIds' => [],
+        'exactCategories' => false,
         'saveOldUrls' => false,
         'regenUrlKey' => false,
         'skipExisting' => false,
@@ -85,6 +86,17 @@ class RunOptionsBuilder
     public function setCategoryIds(array $categoryIds): static
     {
         $this->values['categoryIds'] = $this->_toIds($categoryIds);
+
+        return $this;
+    }
+
+    /**
+     * @param bool $value true: process only the given category IDs (see RunOptionsInterface::isExactCategories())
+     * @return $this
+     */
+    public function setExactCategories(bool $value): static
+    {
+        $this->values['exactCategories'] = $value;
 
         return $this;
     }
@@ -222,6 +234,33 @@ class RunOptionsBuilder
     }
 
     /**
+     * Set options from an array as RunOptionsInterface::toArray() returns it; missing keys keep their current value
+     *
+     * @param array<string, mixed> $options
+     * @return $this
+     * @throws \InvalidArgumentException for an unknown key or a value of the wrong type (nothing is set then), so a
+     *         typo can't silently widen a run to e.g. all products
+     */
+    public function fromArray(array $options): static
+    {
+        $unknown = array_diff(array_keys($options), array_keys(self::DEFAULTS));
+        if (count($unknown) > 0) {
+            throw new \InvalidArgumentException('Unknown run option(s): ' . implode(', ', $unknown));
+        }
+        foreach ($options as $key => $value) {
+            if (!$this->_isValidValue($key, $value)) {
+                throw new \InvalidArgumentException("Invalid value for run option \"{$key}\"");
+            }
+        }
+
+        foreach ($options as $key => $value) {
+            $this->{'set' . ucfirst($key)}($value);
+        }
+
+        return $this;
+    }
+
+    /**
      * @return RunOptionsInterface
      */
     public function create(): RunOptionsInterface
@@ -230,6 +269,30 @@ class RunOptionsBuilder
         $this->values = self::DEFAULTS;
 
         return $options;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed $value
+     * @return bool
+     */
+    private function _isValidValue(string $key, mixed $value): bool
+    {
+        $default = self::DEFAULTS[$key];
+        if (is_array($default)) {
+            return is_array($value) && count(array_filter(
+                $value,
+                fn ($id): bool => is_int($id) || (is_string($id) && ctype_digit($id))
+            )) === count($value);
+        }
+        if (is_bool($default)) {
+            return is_bool($value);
+        }
+        if ($default === null) {
+            return $value === null || is_string($value);
+        }
+
+        return is_string($value);
     }
 
     /**

@@ -9,7 +9,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - a public service API to run the regeneration from code (cron jobs, queue consumers, integrations):
   `Api\RegenerateServiceInterface` (`validate()`, `run()`), run options built with `Model\RunOptionsBuilder`,
   a `RunResultInterface` with failure counts/details, and an optional `ProgressReporterInterface`. The CLI
-  command now runs through it; its options and output are unchanged. See "Use From Code" in the README.
+  command now runs through it; its options and output are unchanged (except the new summary line below). See "Use
+  From Code" in the README.
+  Also: a documented way to stop a run (throw from the reporter), processed counts in the result,
+  `toArray()`/`RunOptionsBuilder::fromArray()` to log and replay a run's options, and an
+  `Api\ChangeListenerInterface` that receives a run's changes (rewrites added/removed/updated with full rows,
+  url_key/url_path changes with their scope; not URL suffix config) — groundwork for a verbose output (#91)
+- new option `--exact-categories`: with `--category-id`/`--categories-range`, process only the given categories —
+  their subcategories only when a given category's URL path changed, and then without regenerating their
+  `url_key`, so `--regen-url-key` stays on the given categories. Useful for precise fixes on large category trees
+- the command prints a summary before "Finished", e.g. `Processed: 38 category(ies), 2040 product(s) in 3 store(s)`
+- a backward-compatibility policy (README "Backward compatibility"): semantic versioning, what stays stable within
+  1.x and which interfaces may grow
 
 ### Changed
 - reindex and cache refresh after a run now happen in the same PHP process through Magento's indexer and
@@ -20,6 +31,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - `--include-not-visible` help and README now say what the option does: "Not Visible Individually" products are
   processed too (e.g. `url_key` regeneration), but Magento creates no URL rewrites for a product that isn't
   visible in any store view — the option never could add those
+- category runs that regenerate their products (Use Categories Path for Product URLs) now show a progress bar for
+  that product phase too, instead of nothing until it ends
 - a `--set-product-suffix`/`--set-category-suffix` value locked in `app/etc/config.php` is now reported before
   anything is saved; before, the other suffix was still saved and then the run aborted
 

@@ -28,15 +28,26 @@ class RunResult implements RunResultInterface
     private array $processedStoreIds;
 
     /**
+     * @var array<string, array<int, int>>
+     */
+    private array $processedCounts;
+
+    /**
      * @param array<string, int> $failureCounts
      * @param array<int, array{entity_type: string, entity_id: int|null, store_id: int|null, message: string}> $failures
      * @param int[] $processedStoreIds
+     * @param array<string, array<int, int>> $processedCounts
      */
-    public function __construct(array $failureCounts, array $failures, array $processedStoreIds)
-    {
+    public function __construct(
+        array $failureCounts,
+        array $failures,
+        array $processedStoreIds,
+        array $processedCounts = []
+    ) {
         $this->failureCounts = $failureCounts;
         $this->failures = $failures;
         $this->processedStoreIds = $processedStoreIds;
+        $this->processedCounts = $processedCounts;
     }
 
     /**
@@ -69,5 +80,13 @@ class RunResult implements RunResultInterface
     public function getProcessedStoreIds(): array
     {
         return $this->processedStoreIds;
+    }
+
+    /**
+     * @return array<string, array<int, int>>
+     */
+    public function getProcessedCounts(): array
+    {
+        return $this->processedCounts;
     }
 }

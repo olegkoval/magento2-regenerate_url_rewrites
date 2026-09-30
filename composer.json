@@ -24,7 +24,5 @@
         "psr-4": {
             "OlegKoval\\RegenerateUrlRewrites\\": ""
         }
-    },
-    "minimum-stability": "alpha",
-    "prefer-stable": true
+    }
 }

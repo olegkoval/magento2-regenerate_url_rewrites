@@ -63,6 +63,14 @@ class RunOptions implements RunOptionsInterface
     /**
      * @return bool
      */
+    public function isExactCategories(): bool
+    {
+        return $this->values['exactCategories'];
+    }
+
+    /**
+     * @return bool
+     */
     public function isSaveOldUrls(): bool
     {
         return $this->values['saveOldUrls'];
@@ -154,5 +162,13 @@ class RunOptions implements RunOptionsInterface
     public function isFlushCache(): bool
     {
         return $this->values['flushCache'];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return $this->values;
     }
 }

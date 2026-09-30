@@ -102,6 +102,7 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
 |---|---|
 | `--category-id=<id>` | Regenerate for one specific category. |
 | `--categories-range=<from>-<to>` | Regenerate for a range of category IDs (gaps in the range are handled automatically). |
+| `--exact-categories` | With `--category-id`/`--categories-range`: process only those categories, not all their subcategories. See [Notes & Caveats](#notes--caveats). |
 | `--skip-products` | Skip regenerating associated product URLs when regenerating categories. See [Notes & Caveats](#notes--caveats). |
 | `--set-category-suffix=<suffix>` | Set the category URL suffix (e.g. `.html`) before regenerating. See [Notes & Caveats](#notes--caveats). |
 
@@ -127,6 +128,12 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
   failures) and exits with code `1` — after reindex and cache refresh have still run. Earlier versions always exited
   `0`, so cron jobs or scripts that check the exit code may start reporting failures that used to be
   hidden.
+
+* **`--exact-categories`**: by default a category run also processes every subcategory of the given
+  categories (a subcategory's URL path is built from its parents'). With this option only the given
+  categories are processed — their subcategories only if a given category's URL path changed, and then
+  without regenerating the subcategories' `url_key` (so `--regen-url-key` touches only the given
+  categories). Products are regenerated only for the processed categories.
 
 * **`--include-not-visible`** makes the run process "Not Visible Individually" products too — e.g. their
   `url_key` is regenerated with `--regen-url-key` — but it can't give them URL rewrites: Magento's own
@@ -201,7 +208,36 @@ if ($result->hasFailures()) {
 ```
 
 `run()` accepts an optional `Api\ProgressReporterInterface` to receive progress; without one nothing is
-printed.
+printed. To **stop a run**, throw from the reporter's `advance()` or `message()`: the run stops after the current
+entity (whose rewrites stay saved), skips the remaining stores and the reindex/cache steps, restores the current
+store and rethrows your exception unchanged. The same goes for an exception from the change listener below.
+
+To **track the run's changes** to URL rewrites and `url_key`/`url_path` values (e.g. to log, audit or undo a run),
+pass an `Api\ChangeListenerInterface` as the third argument of `run()`: its `onChange()` receives an `Api\Data\ChangeInterface` per saved change —
+`rewrite_added` / `rewrite_removed` / `rewrite_updated` (with the full old/new `url_rewrite` rows) and
+`url_key_changed` / `url_path_changed` (with the store of the attribute row written, 0 = default scope, and
+`hasOldRow()`/`hasNewRow()`, since such a row can exist and hold NULL). A rolled-back save reports nothing; without a
+listener no extra queries run. The reports are complete enough to undo a run — except URL suffix changes
+(`setProductUrlSuffix()`/`setCategoryUrlSuffix()`) and the suffix swap Magento then applies to existing rewrites,
+which aren't reported.
+
+`$result->getProcessedCounts()` has the entities the run went through (entity type → store ID → count).
+`$options->toArray()` / `$builder->fromArray($array)` log and replay a run; an unknown key or a value of the wrong
+type makes `fromArray()` throw `\InvalidArgumentException`, so a typo can't widen a run to e.g. all products.
+
+### Backward compatibility
+
+This extension follows [Semantic Versioning](https://semver.org/). Within 1.x:
+
+* Nothing marked `@api` is removed or renamed, and neither is any public or protected member of the command
+  classes (`Console\Command\RegenerateUrlRewrites`, `RegenerateUrlRewritesAbstract`), the command name or the
+  `INPUT_KEY_*` constant values; constructors only gain optional trailing arguments.
+* Interfaces you implement (`Api\ProgressReporterInterface`, `Api\ChangeListenerInterface`) never gain methods —
+  new hooks come as new interfaces. Interfaces only this extension implements (`Api\RegenerateServiceInterface`,
+  `Api\Data\RunOptionsInterface`, `Api\Data\RunResultInterface`, `Api\Data\ChangeInterface`) may gain methods
+  or optional parameters in minor releases, so don't implement them yourself (a plugin on the service is fine).
+  The keys of the rewrite arrays in `ChangeInterface` stay the same.
+* The models (`Model\Regenerate*Rewrites`) are internal: use the service instead.
 
 ## SUPPORT ME
 

@@ -158,24 +158,29 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
         $pageCount = $products->getLastPageNumber();
         $currentPage = 1;
 
-        $this->_progressStart($storeId, (int)$products->getSize());
-        while ($currentPage <= $pageCount) {
-            $products->clear();
-            $products->setCurPage($currentPage);
+        try {
+            $this->_progressStart($storeId, (int)$products->getSize());
+            while ($currentPage <= $pageCount) {
+                $products->clear();
+                $products->setCurPage($currentPage);
 
-            foreach ($products as $product) {
-                $this->processProduct($product, $storeId);
-                $this->_progressAdvance();
+                foreach ($products as $product) {
+                    $this->processProduct($product, $storeId);
+                    $this->_flushChanges();
+                    $this->_countProcessed($storeId);
+                    $this->_progressAdvance();
+                }
+
+                $currentPage++;
             }
-
-            $currentPage++;
-        }
-        $this->_progressFinish();
-
-        // internal option: a caller running several batches syncs the product/category table once itself
-        // (a full-table scan each time otherwise)
-        if (!$this->regenerateOptions['skipSecondaryTableUpdate']) {
-            $this->_updateSecondaryTable();
+            $this->_progressFinish();
+        } finally {
+            // also when a run is stopped (an exception from the progress reporter): the rows saved so far get
+            // their product/category table entries. Internal option: a caller running several batches syncs the
+            // table once itself (a full-table scan each time otherwise)
+            if (!$this->regenerateOptions['skipSecondaryTableUpdate']) {
+                $this->_updateSecondaryTable();
+            }
         }
 
         return $this;
@@ -228,13 +233,21 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
         }
 
         try {
-            $this->_getProductAction()->updateAttributes(
-                [$entity->getId()],
-                $updateAttributes,
-                $storeId
-            );
-            if ($inheritDefaultUrlKey) {
-                $this->_deleteStoreUrlKey($entity, $storeId);
+            $scopes = array_unique([0, $storeId]);
+            $before = $this->changeListener !== null ? $this->_readUrlAttributes($entity, $scopes) : null;
+            try {
+                $this->_getProductAction()->updateAttributes(
+                    [$entity->getId()],
+                    $updateAttributes,
+                    $storeId
+                );
+                if ($inheritDefaultUrlKey) {
+                    $this->_deleteStoreUrlKey($entity, $storeId);
+                }
+            } finally {
+                if ($before !== null) {
+                    $this->_queueAttributeChanges($entity, $before, $this->_readUrlAttributes($entity, $scopes));
+                }
             }
 
             // store 0 in an all-stores run only updates the default-scope attributes above: generating here
