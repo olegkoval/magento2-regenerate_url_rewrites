@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [1.11.0] - 2026-09-30
 ### Added
 - a public service API to run the regeneration from code (cron jobs, queue consumers, integrations):
   `Api\RegenerateServiceInterface` (`validate()`, `run()`), run options built with `Model\RunOptionsBuilder`,
@@ -35,6 +35,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
   that product phase too, instead of nothing until it ends
 - a `--set-product-suffix`/`--set-category-suffix` value locked in `app/etc/config.php` is now reported before
   anything is saved; before, the other suffix was still saved and then the run aborted
+- for code extending the command or the models: the command's protected `_runReindexation()`, `_runClearCache()`
+  and `_setSeoUrlSuffixes()` moved into the service, and the models' `_showProgress()` / `progressBarProgress` /
+  `progressBarTotal` were replaced by the progress reporter; the command's constructor gained an optional 9th
+  argument (8-argument subclasses keep working). The backward-compatibility policy applies from this release on
 
 ### Fixed
 - `--regen-url-key` for a store view left a stale store-level `url_key` in place when the regenerated key was
