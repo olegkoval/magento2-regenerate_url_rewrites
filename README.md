@@ -188,6 +188,9 @@ or
 
 ## USE FROM CODE
 
+Product URL maintenance preserves `updated_at`, including products processed by category runs.
+With `--regen-url-key`, a product's timestamp is updated only when its URL key actually changes.
+
 The same run is available as a service (`@api`), e.g. for cron jobs, queue consumers or integrations —
 inject `OlegKoval\RegenerateUrlRewrites\Api\RegenerateServiceInterface`:
 

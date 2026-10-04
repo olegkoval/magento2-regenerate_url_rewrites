@@ -224,9 +224,8 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
             } else {
                 $entity->setUrlKey($generatedKey);
 
-                if ($storeId == 0 || $generatedKey !== $this->_getDefaultScopeUrlKey($entity->getId())) {
-                    $updateAttributes['url_key'] = $generatedKey;
-                } else {
+                $updateAttributes['url_key'] = $generatedKey;
+                if ($storeId != 0 && $generatedKey === $this->_getDefaultScopeUrlKey($entity->getId())) {
                     $inheritDefaultUrlKey = true;
                 }
             }
@@ -236,14 +235,7 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
             $scopes = array_unique([0, $storeId]);
             $before = $this->changeListener !== null ? $this->_readUrlAttributes($entity, $scopes) : null;
             try {
-                $this->_getProductAction()->updateAttributes(
-                    [$entity->getId()],
-                    $updateAttributes,
-                    $storeId
-                );
-                if ($inheritDefaultUrlKey) {
-                    $this->_deleteStoreUrlKey($entity, $storeId);
-                }
+                $this->_saveProductUrlAttributes($entity, $updateAttributes, $storeId, $inheritDefaultUrlKey);
             } finally {
                 if ($before !== null) {
                     $this->_queueAttributeChanges($entity, $before, $this->_readUrlAttributes($entity, $scopes));
@@ -301,6 +293,96 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
         }
 
         return $this->productAction;
+    }
+
+    /**
+     * URL maintenance must not mark a product as edited. Use the mass action only for a changed URL key.
+     *
+     * @param \Magento\Catalog\Model\Product $entity
+     * @param array $attributes
+     * @param int $storeId
+     * @param bool $inheritDefaultUrlKey
+     * @return void
+     */
+    protected function _saveProductUrlAttributes(
+        $entity,
+        array $attributes,
+        int $storeId,
+        bool $inheritDefaultUrlKey
+    ): void {
+        $singleStore = $this->helper->getStoreManager()->hasSingleStore();
+        $writeStoreId = $singleStore ? 0 : $storeId;
+        $connection = $entity->getResource()->getConnection();
+        $connection->beginTransaction();
+        try {
+            if (array_key_exists('url_key', $attributes)) {
+                $rows = $this->_readUrlAttributes($entity, array_unique([0, $writeStoreId]));
+                $oldKey = $rows['url_key'][$writeStoreId][0]
+                    ? $rows['url_key'][$writeStoreId][1]
+                    : $rows['url_key'][0][1];
+                if ($attributes['url_key'] !== $oldKey) {
+                    $this->_getProductAction()->updateAttributes(
+                        [$entity->getId()],
+                        ['url_key' => $attributes['url_key']],
+                        $storeId
+                    );
+                    unset($attributes['url_key']);
+                }
+                if ($inheritDefaultUrlKey && !$singleStore) {
+                    unset($attributes['url_key']);
+                    $this->_deleteStoreUrlKey($entity, $storeId);
+                }
+            }
+            foreach ($attributes as $code => $value) {
+                $this->_writeUrlMaintenanceAttribute($entity, $code, $value, $writeStoreId, $singleStore);
+            }
+            $connection->commit();
+        } catch (\Throwable $e) {
+            $connection->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Preserve the mass action's scope and NULL-row behavior, without its unconditional updated_at write.
+     *
+     * @param \Magento\Catalog\Model\Product $entity
+     * @param string $code
+     * @param string|null $value
+     * @param int $storeId
+     * @param bool $singleStore
+     * @return void
+     */
+    protected function _writeUrlMaintenanceAttribute($entity, string $code, ?string $value, int $storeId, bool $singleStore): void
+    {
+        $resource = $entity->getResource();
+        $attribute = $resource->getAttribute($code);
+        $connection = $resource->getConnection();
+        $table = $attribute->getBackend()->getTable();
+        $linkField = $resource->getLinkField();
+        $row = [
+            'attribute_id' => (int)$attribute->getId(),
+            $linkField => (int)$entity->getData($linkField),
+            'store_id' => $storeId,
+            'value' => $value,
+        ];
+        if ($singleStore) {
+            $connection->delete($table, [
+                'attribute_id = ?' => $row['attribute_id'],
+                $linkField . ' = ?' => $row[$linkField],
+                'store_id <> ?' => 0,
+            ]);
+        }
+        $storeIds = [$storeId];
+        if (!$attribute->isScopeStore()) {
+            $storeIds = $attribute->isScopeWebsite() && $storeId !== 0
+                ? $this->helper->getStoreManager()->getStore($storeId)->getWebsite()->getStoreIds(true)
+                : [0];
+        }
+        foreach ($storeIds as $targetStoreId) {
+            $row['store_id'] = (int)$targetStoreId;
+            $connection->insertOnDuplicate($table, $row, ['value']);
+        }
     }
 
     /**

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 ### Fixed
+- ordinary product URL rewrite regeneration no longer changes `updated_at`, including products processed
+  by category runs; explicit URL-key regeneration updates the timestamp only when the key changes
 - category runs with `--regen-url-key` now preserve cascaded products' URL keys; only category URL keys are
   regenerated, while the products' paths and rewrites are still refreshed
 
