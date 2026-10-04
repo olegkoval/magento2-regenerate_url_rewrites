@@ -466,6 +466,8 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     {
         $reportProgress = $this->regenerateOptions['showProgress'] && $this->progressReporter !== null;
         $options = $this->regenerateOptions;
+        // Cascaded products need new paths and rewrites, but keep their own URL keys.
+        $options['regenUrlKey'] = false;
         $options['showProgress'] = $reportProgress;
         $options['progressPassStarted'] = true;
         $options['skipSecondaryTableUpdate'] = true;

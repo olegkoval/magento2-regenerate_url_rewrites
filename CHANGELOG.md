@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Fixed
+- category runs with `--regen-url-key` now preserve cascaded products' URL keys; only category URL keys are
+  regenerated, while the products' paths and rewrites are still refreshed
+
 ## [1.11.0] - 2026-09-30
 ### Added
 - a public service API to run the regeneration from code (cron jobs, queue consumers, integrations):

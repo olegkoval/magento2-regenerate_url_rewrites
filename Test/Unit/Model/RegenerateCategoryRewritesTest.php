@@ -234,6 +234,29 @@ class RegenerateCategoryRewritesTest extends TestCase
     /**
      * @return void
      */
+    public function testCategoryUrlKeyRegenerationPreservesCascadedProductKeys(): void
+    {
+        foreach ([false, true] as $exactCategories) {
+            $this->model->setRegenerateOptions([
+                'regenUrlKey' => true,
+                'exactCategories' => $exactCategories,
+                'saveOldUrls' => true,
+            ]);
+            (fn () => $this->pendingProductIds = [77 => true])->call($this->model);
+
+            $this->invoke('_regenerateProducts', 1);
+
+            $productOptions = (fn (): array => $this->regenerateOptions)->call($this->productModel);
+            self::assertFalse($productOptions['regenUrlKey']);
+            self::assertTrue($productOptions['saveOldUrls']);
+            self::assertTrue((fn (): bool => $this->regenerateOptions['regenUrlKey'])->call($this->model));
+        }
+        self::assertSame([[77], [77]], $this->productModel->calls);
+    }
+
+    /**
+     * @return void
+     */
     public function testPathChangesOfEarlierStoresOfTheRunCountUntilTheNextRunStarts(): void
     {
         (fn () => $this->changedUrlPathIds = [3 => true])->call($this->model);

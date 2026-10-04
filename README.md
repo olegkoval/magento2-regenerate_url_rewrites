@@ -80,7 +80,7 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
 | `--entity-type=<product\|category>` | Entity type to regenerate. Default: `product`. Can be omitted when `--category-id`/`--categories-range` is given — the extension infers `category` automatically. |
 | `--store-id=<id>` | Regenerate only for the given store view. Omit to run for all stores. |
 | `--save-old-urls` | Keep old URLs working: when a product/category URL changes, its old URL becomes a 301 redirect to the new one instead of being discarded. |
-| `--regen-url-key` | Also regenerate `url_key` values. By default `url_key` is left untouched and only `url_path`/URL Rewrites are regenerated. |
+| `--regen-url-key` | Also regenerate `url_key` values for the selected entity type. Category runs preserve the URL keys of cascaded products. By default `url_key` is left untouched and only `url_path`/URL Rewrites are regenerated. |
 | `--no-reindex` | Skip the full reindex that normally runs at the end. |
 | `--no-cache-clean` | Skip `cache:clean` at the end. |
 | `--no-cache-flush` | Skip `cache:flush` at the end. |
