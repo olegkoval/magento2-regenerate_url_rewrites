@@ -141,6 +141,10 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
   hidden by default but visible in some store view does get rewrites for that store view — every run
   includes it there anyway; `--store-id=0` runs need this option for it.)
 
+* **Product `updated_at`** is left alone by a regeneration run (incl. products processed by category runs), so
+  sitemap `lastmod`, delta syncs and "recently updated" reports don't see the whole catalog as changed. With
+  `--regen-url-key`, a product's `updated_at` changes only when its URL key actually changes.
+
 * **`--regen-url-key`** inverted its default behavior in 1.8.0: `url_key` is no longer regenerated
   automatically. Pass `--regen-url-key` explicitly whenever you want it regenerated too — see
   [Deprecated Options](#deprecated-options) if you're upgrading from an older version.
@@ -187,9 +191,6 @@ or
 >`$> php bin/magento ok:urlrewrites:regenerate --entity-type=category --set-category-suffix=.html`
 
 ## USE FROM CODE
-
-Product URL maintenance preserves `updated_at`, including products processed by category runs.
-With `--regen-url-key`, a product's timestamp is updated only when its URL key actually changes.
 
 The same run is available as a service (`@api`), e.g. for cron jobs, queue consumers or integrations —
 inject `OlegKoval\RegenerateUrlRewrites\Api\RegenerateServiceInterface`:
