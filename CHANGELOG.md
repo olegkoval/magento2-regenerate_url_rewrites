@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [1.12.0] - 2026-10-07
 ### Added
 - messages from the extension author (security notes, releases) in the admin notifications bell and at the end of
   interactive console runs, read once a day from the
