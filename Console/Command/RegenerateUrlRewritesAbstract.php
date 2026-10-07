@@ -22,6 +22,7 @@ use OlegKoval\RegenerateUrlRewrites\Api\RegenerateServiceInterface;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateCategoryRewrites;
+use OlegKoval\RegenerateUrlRewrites\Model\Notification\ConsoleMessages;
 
 abstract class RegenerateUrlRewritesAbstract extends Command
 {
@@ -40,6 +41,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     const INPUT_KEY_NO_PROGRESS = 'no-progress';
     const INPUT_KEY_NO_CACHE_FLUSH = 'no-cache-flush';
     const INPUT_KEY_NO_CACHE_CLEAN = 'no-cache-clean';
+    const INPUT_KEY_NO_MESSAGES = 'no-messages';
     const INPUT_KEY_CATEGORIES_RANGE = 'categories-range';
     const INPUT_KEY_PRODUCTS_RANGE = 'products-range';
     const INPUT_KEY_CATEGORY_ID = 'category-id';
@@ -94,6 +96,11 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     protected RegenerateServiceInterface $regenerateService;
 
     /**
+     * @var ConsoleMessages
+     */
+    protected ConsoleMessages $consoleMessages;
+
+    /**
      * @var array
      */
     protected $_commandOptions = [];
@@ -121,6 +128,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * @param SettingChecker $settingChecker
      * @param RegenerateServiceInterface|null $regenerateService null: a subclass calling this with the 8 arguments of
      *        releases before 1.11.0 (the service comes from the ObjectManager then)
+     * @param ConsoleMessages|null $consoleMessages null: a subclass calling this with the arguments of releases
+     *        before 1.12.0
      */
     public function __construct(
         ResourceConnection         $resource,
@@ -131,7 +140,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         RegenerateProductRewrites  $regenerateProductRewrites,
         ConfigFactory              $configFactory,
         SettingChecker             $settingChecker,
-        ?RegenerateServiceInterface $regenerateService = null
+        ?RegenerateServiceInterface $regenerateService = null,
+        ?ConsoleMessages $consoleMessages = null
     )
     {
         parent::__construct();
@@ -146,6 +156,8 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_settingChecker = $settingChecker;
         $this->regenerateService = $regenerateService
             ?? ObjectManager::getInstance()->get(RegenerateServiceInterface::class);
+        $this->consoleMessages = $consoleMessages
+            ?? ObjectManager::getInstance()->get(ConsoleMessages::class);
 
         // set default config values
         $this->_commandOptions['entityType'] = 'product';

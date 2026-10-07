@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Added
+- messages from the extension author (security notes, releases) in the admin notifications bell and at the end of
+  interactive console runs, read once a day from the
+  [magento-extension-notifications](https://github.com/olegkoval/magento-extension-notifications) repository. Only a
+  generic user agent is sent. Turn them off in `Stores > Configuration > Advanced > System > Notifications`, or per
+  run with the new `--no-messages` option. See "Messages From the Author" in the README
+### Changed
+- the module now depends on `Magento_AdminNotification` (part of Magento Open Source)
+
 ## [1.11.1] - 2026-10-05
 ### Fixed
 - ordinary product URL rewrite regeneration no longer changes `updated_at`, including products processed

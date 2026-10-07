@@ -15,10 +15,12 @@ use OlegKoval\RegenerateUrlRewrites\Api\Data\RunOptionsInterface;
 use OlegKoval\RegenerateUrlRewrites\Console\ConsoleProgressReporter;
 use OlegKoval\RegenerateUrlRewrites\Model\RunOptionsBuilder;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\StreamOutput;
 
 class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 {
@@ -86,6 +88,12 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     null,
                     InputOption::VALUE_NONE,
                     'Do not run cache:clean when URL rewrites are generated.'
+                ),
+                new InputOption(
+                    self::INPUT_KEY_NO_MESSAGES,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Do not show messages from the extension author at the end of the run.'
                 ),
                 new InputOption(
                     self::INPUT_KEY_CATEGORIES_RANGE,
@@ -211,6 +219,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         $this->_displayConsoleMsg();
 
         $this->_showSupportMe();
+        $this->_showAuthorMessages();
 
         $this->_output->writeln($this->_getProcessedSummary($result->getProcessedCounts()));
 
@@ -224,6 +233,48 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         $this->_output->writeln('Finished');
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Messages from the extension's feed; only on terminal runs, so cron logs and scripts stay unchanged
+     *
+     * @return void
+     */
+    private function _showAuthorMessages(): void
+    {
+        if (!$this->_isTerminalRun()
+            || $this->_output->isQuiet()
+            || $this->_input->getOption(self::INPUT_KEY_NO_MESSAGES)
+        ) {
+            return;
+        }
+
+        $messages = $this->consoleMessages->getMessages();
+        if (!$messages) {
+            return;
+        }
+
+        $this->_output->writeln('Messages from the extension author (hide with --' . self::INPUT_KEY_NO_MESSAGES . '):');
+        foreach ($messages as $message) {
+            // feed text is not ours to format: escape it so "<...>" can't become console markup
+            $this->_output->writeln(' * <info>' . OutputFormatter::escape($message['title']) . '</info>');
+            foreach (array_filter([$message['description'], $message['link']]) as $line) {
+                $this->_output->writeln('   ' . OutputFormatter::escape($line));
+            }
+        }
+        $this->_output->writeln('');
+    }
+
+    /**
+     * Symfony keeps cron and piped runs interactive (only -n/-q change that), so check the output stream itself
+     *
+     * @return bool
+     */
+    protected function _isTerminalRun(): bool
+    {
+        return $this->_input->isInteractive()
+            && $this->_output instanceof StreamOutput
+            && stream_isatty($this->_output->getStream());
     }
 
     /**

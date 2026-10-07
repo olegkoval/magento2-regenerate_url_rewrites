@@ -10,4 +10,11 @@
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <system>
+            <adminnotification>
+                <olegkoval_regenerate_url_rewrites>1</olegkoval_regenerate_url_rewrites>
+            </adminnotification>
+        </system>
+    </default>
 </config>

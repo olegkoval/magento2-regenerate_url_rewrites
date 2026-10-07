@@ -58,7 +58,8 @@ jobs:
           EOF
           composer require --no-interaction --no-progress --no-plugins \
             "olegkoval/magento2-regenerate-url-rewrites:*@dev" \
-            "magento/module-catalog-url-rewrite:100.4.*" "magento/module-config:*" "phpunit/phpunit:^10.5"
+            "magento/module-catalog-url-rewrite:100.4.*" "magento/module-config:*" \
+            "magento/module-admin-notification:*" "phpunit/phpunit:^10.5"
       - name: Run unit tests
         run: '"$RUNNER_TEMP/mage/vendor/bin/phpunit" --bootstrap "$RUNNER_TEMP/mage/vendor/autoload.php" --do-not-cache-result "$GITHUB_WORKSPACE/Test/Unit"'
 

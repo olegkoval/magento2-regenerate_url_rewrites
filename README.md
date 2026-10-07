@@ -21,6 +21,7 @@ Changelog: [CHANGELOG.md](CHANGELOG.md)
 * [Deprecated Options](#deprecated-options)
 * [More Examples](#more-examples)
 * [Use From Code](#use-from-code)
+* [Messages From the Author](#messages-from-the-author)
 * [Support Me](#support-me)
 * [Contacts](#contacts)
 * [License](#license)
@@ -85,6 +86,7 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
 | `--no-cache-clean` | Skip `cache:clean` at the end. |
 | `--no-cache-flush` | Skip `cache:flush` at the end. |
 | `--no-progress` | Hide the console progress bar. |
+| `--no-messages` | Don't show messages from the extension author at the end of the run. See [Messages From the Author](#messages-from-the-author). |
 | `--delete-orphaned-rewrites` | Delete `url_rewrite` rows (for the given `--entity-type`) whose product/category no longer exists. |
 | `--skip-existing` | Skip an entity entirely if it already has any URL Rewrite for the current store, instead of always deleting + regenerating. |
 
@@ -245,6 +247,25 @@ This extension follows [Semantic Versioning](https://semver.org/). Within 1.x:
   classes the command's constructor takes (`Helper\Regenerate`, `Model\RegenerateProductRewrites`,
   `Model\RegenerateCategoryRewrites`) keep their names, so subclasses calling `parent::__construct()` keep working.
 * Otherwise the models (`Model\Regenerate*Rewrites`) are internal: use the service instead.
+
+## MESSAGES FROM THE AUTHOR
+
+The extension can show short messages from its author, such as security notes or new releases:
+
+* **Admin:** in the notifications bell (`System > Notifications`). Only security issues use the critical
+  severity that opens Magento's "Incoming Message" popup.
+* **Console:** at the end of an interactive `ok:urlrewrites:regenerate` run, before the summary. Runs without a
+  terminal (cron, pipes), runs with `-q` and runs with `--no-messages` show nothing.
+
+The messages come from
+[`regenerate-url-rewrites.xml`](https://github.com/olegkoval/magento-extension-notifications/blob/main/regenerate-url-rewrites.xml)
+in the [magento-extension-notifications](https://github.com/olegkoval/magento-extension-notifications) repository,
+read at most once a day (admin and console separately) with a 2 s timeout. A failed read is ignored and retried the
+next day. The request sends only a generic user agent: no shop URL, admin URL, Magento version or other data.
+
+To turn the messages off, set `Stores > Configuration > Advanced > System > Notifications > Regenerate URL
+Rewrites Messages` to "No", or run
+`bin/magento config:set system/adminnotification/olegkoval_regenerate_url_rewrites 0`.
 
 ## SUPPORT ME
 

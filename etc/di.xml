@@ -15,6 +15,18 @@
     <type name="OlegKoval\RegenerateUrlRewrites\Console\Command\RegenerateUrlRewrites">
         <arguments>
             <argument name="regenerateService" xsi:type="object">OlegKoval\RegenerateUrlRewrites\Api\RegenerateServiceInterface\Proxy</argument>
+            <argument name="consoleMessages" xsi:type="object">OlegKoval\RegenerateUrlRewrites\Model\Notification\ConsoleMessages\Proxy</argument>
+        </arguments>
+    </type>
+    <!-- the feed lives in its own repository, so every release reads the current messages;
+         "edition" is replaced by an add-on edition's di.xml to get that edition's items instead of these -->
+    <type name="OlegKoval\RegenerateUrlRewrites\Model\Notification\FeedSource">
+        <arguments>
+            <argument name="feedUrl" xsi:type="string">https://raw.githubusercontent.com/olegkoval/magento-extension-notifications/main/regenerate-url-rewrites.xml</argument>
+            <argument name="audiences" xsi:type="array">
+                <item name="edition" xsi:type="string">free</item>
+                <item name="everyone" xsi:type="string">all</item>
+            </argument>
         </arguments>
     </type>
     <type name="Magento\Framework\Console\CommandListInterface">

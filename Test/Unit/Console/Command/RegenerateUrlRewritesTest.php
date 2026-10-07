@@ -16,12 +16,16 @@ use OlegKoval\RegenerateUrlRewrites\Api\ProgressReporterInterface;
 use OlegKoval\RegenerateUrlRewrites\Api\RegenerateServiceInterface;
 use OlegKoval\RegenerateUrlRewrites\Console\Command\RegenerateUrlRewrites;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
+use OlegKoval\RegenerateUrlRewrites\Model\Notification\ConsoleMessages;
 use OlegKoval\RegenerateUrlRewrites\Model\RunResult;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\StreamOutput;
 
 class RegenerateUrlRewritesTest extends TestCase
 {
@@ -171,15 +175,77 @@ class RegenerateUrlRewritesTest extends TestCase
     }
 
     /**
+     * @return void
+     */
+    public function testAuthorMessagesAreEscapedAndPrintedBeforeTheSummary(): void
+    {
+        $text = $this->execute(new RunResult([], [], [1]), null, [], [
+            ['title' => 'Release <is> out', 'description' => 'Read <b>this</b>', 'link' => 'https://example.com/a'],
+            ['title' => 'Second', 'description' => '', 'link' => ''],
+        ])[1];
+
+        self::assertStringContainsString(
+            "Messages from the extension author (hide with --no-messages):
+ * Release <is> out
+   Read <b>this</b>
+"
+            . "   https://example.com/a
+ * Second
+
+Processed: nothing
+Finished",
+            $text
+        );
+    }
+
+    /**
+     * @return void
+     */
+    public function testAuthorMessagesAreSkippedWithTheOptionOrWithoutATerminal(): void
+    {
+        $messages = [['title' => 'Hello', 'description' => '', 'link' => '']];
+
+        $optedOut = $this->execute(new RunResult([], [], [1]), null, [], $messages, ['--no-messages' => true])[1];
+        $cron = $this->execute(new RunResult([], [], [1]), null, [], $messages, [], false)[1];
+
+        self::assertStringNotContainsString('Hello', $optedOut);
+        self::assertStringNotContainsString('Hello', $cron);
+    }
+
+    /**
+     * @return void
+     */
+    public function testOnlyAnInteractiveRunWritingToATerminalCountsAsTerminalRun(): void
+    {
+        $command = (new \ReflectionClass(RegenerateUrlRewrites::class))->newInstanceWithoutConstructor();
+        $isTerminalRun = function (InputInterface $input, OutputInterface $output): bool {
+            $this->_input = $input;
+            $this->_output = $output;
+            return $this->_isTerminalRun();
+        };
+
+        // a cron job or a pipe: interactive by Symfony's default, but its output is no TTY
+        $piped = new StreamOutput(fopen('php://memory', 'w'));
+        self::assertFalse($isTerminalRun->call($command, new ArrayInput([]), $piped));
+        self::assertFalse($isTerminalRun->call($command, new ArrayInput([]), new BufferedOutput()));
+    }
+
+    /**
      * @param RunResult|InputException $outcome what the service returns or throws
      * @param string|null $storeIdOption
      * @param array $commandOptions overrides of the parsed command options
+     * @param array $messages what the author's feed returns
+     * @param array $extraInput more command-line options
+     * @param bool $interactive false: a cron/pipe run
      * @return array{0: int, 1: string, 2: object}
      */
     private function execute(
         RunResult|InputException $outcome,
         ?string $storeIdOption = null,
-        array $commandOptions = []
+        array $commandOptions = [],
+        array $messages = [],
+        array $extraInput = [],
+        bool $interactive = true
     ): array {
         $service = new class ($outcome) implements RegenerateServiceInterface {
             /**
@@ -234,14 +300,28 @@ class RegenerateUrlRewritesTest extends TestCase
             public function getCommandOptions(): void
             {
             }
+
+            /**
+             * A BufferedOutput is never a terminal: here only the interactive flag decides
+             *
+             * @return bool
+             */
+            protected function _isTerminalRun(): bool
+            {
+                return $this->_input->isInteractive();
+            }
         };
 
         $helper = $this->createMock(RegenerateHelper::class);
         $helper->method('getSupportMeText')->willReturn(['support']);
 
-        (function () use ($service, $helper, $commandOptions): void {
+        $consoleMessages = $this->createMock(ConsoleMessages::class);
+        $consoleMessages->method('getMessages')->willReturn($messages);
+
+        (function () use ($service, $helper, $consoleMessages, $commandOptions): void {
             $this->helper = $helper;
             $this->regenerateService = $service;
+            $this->consoleMessages = $consoleMessages;
             // the real constructor (bypassed here) sets the defaults; these are a parsed run
             $this->_commandOptions = array_merge([
                 'entityType' => 'product',
@@ -268,8 +348,15 @@ class RegenerateUrlRewritesTest extends TestCase
             ], $commandOptions);
         })->call($command);
 
-        $definition = new InputDefinition([new InputOption('store-id', null, InputOption::VALUE_OPTIONAL)]);
-        $input = new ArrayInput($storeIdOption === null ? [] : ['--store-id' => $storeIdOption], $definition);
+        $definition = new InputDefinition([
+            new InputOption('store-id', null, InputOption::VALUE_OPTIONAL),
+            new InputOption('no-messages', null, InputOption::VALUE_NONE),
+        ]);
+        $input = new ArrayInput(
+            ($storeIdOption === null ? [] : ['--store-id' => $storeIdOption]) + $extraInput,
+            $definition
+        );
+        $input->setInteractive($interactive);
         $output = new BufferedOutput();
         $code = (new \ReflectionMethod($command, 'execute'))->invoke($command, $input, $output);
 

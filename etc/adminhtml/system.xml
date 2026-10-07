@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Regenerate Url Rewrites
+ *
+ * @package OlegKoval_RegenerateUrlRewrites
+ * @author Oleg Koval <olegkoval.ca@gmail.com>
+ * @copyright 2017-2067 Oleg Koval
+ * @license OSL-3.0, AFL-3.0
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="system">
+            <group id="adminnotification">
+                <field id="olegkoval_regenerate_url_rewrites" translate="label comment" type="select" sortOrder="100" showInDefault="1" canRestore="1">
+                    <label>Regenerate URL Rewrites Messages</label>
+                    <comment>Show messages from the Regenerate URL Rewrites extension author (security notes, releases) in the admin and at the end of its console command. The feed is read from GitHub once a day; no shop data is sent.</comment>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>
