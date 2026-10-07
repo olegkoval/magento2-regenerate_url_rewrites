@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
   run with the new `--no-messages` option. See "Messages From the Author" in the README
 ### Changed
 - the module now depends on `Magento_AdminNotification` (part of Magento Open Source)
+- the Composer package no longer contains the unit tests (`Test/`) or the CI configuration (`.github/`)
 
 ## [1.11.1] - 2026-10-05
 ### Fixed

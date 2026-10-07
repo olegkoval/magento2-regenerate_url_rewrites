@@ -1,0 +1,4 @@
+# kept out of the Composer package (dist archives are built with git archive)
+/Test export-ignore
+/.github export-ignore
+/.gitattributes export-ignore
