@@ -15,12 +15,19 @@ use OlegKoval\RegenerateUrlRewrites\Api\Data\ChangeInterface;
 use OlegKoval\RegenerateUrlRewrites\Api\ProgressReporterInterface;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\Model\AbstractModel;
 use Magento\UrlRewrite\Model\Storage\DbStorage;
 use Magento\CatalogUrlRewrite\Model\ResourceModel\Category\Product as ProductUrlRewriteResource;
 
 abstract class AbstractRegenerateRewrites
 {
+    /**
+     * Failure message once the transaction around the run is gone (see _beginTransaction())
+     */
+    public const ERROR_TRANSACTION_LOST = 'the surrounding database transaction was lost (e.g. to a deadlock),'
+        . ' so nothing more is saved in it';
+
     /**
      * @var string
      */
@@ -49,6 +56,20 @@ abstract class AbstractRegenerateRewrites
      * @var ChangeInterface[]
      */
     protected array $pendingChanges = [];
+
+    /**
+     * Transactions opened by _beginTransaction(), innermost last: a savepoint name, or null for an adapter
+     * transaction
+     * @var array<int, string|null>
+     */
+    private array $transactionStack = [];
+
+    /**
+     * A savepoint couldn't be rolled back: the server ended the caller's transaction, so a statement now would
+     * commit at once, out of the caller's control
+     * @var bool
+     */
+    private bool $transactionLost = false;
 
     /**
      * url_rewrite columns a change reports, in this order
@@ -224,6 +245,8 @@ abstract class AbstractRegenerateRewrites
     {
         $this->resetFailures();
         $this->resetProcessedCounts();
+        $this->transactionStack = [];
+        $this->transactionLost = false;
 
         return $this;
     }
@@ -310,7 +333,7 @@ abstract class AbstractRegenerateRewrites
         // with its old rewrites deleted and nothing to replace them (see #137)
         $connection = $this->_getResourceConnection()->getConnection();
         $committed = false;
-        $connection->beginTransaction();
+        $this->_beginTransaction($connection);
         try {
             // to report the changes (only when someone listens): the rows being replaced plus whatever holds the new
             // paths already — a row outside the replaced set (e.g. of a sibling store view) is updated by
@@ -327,10 +350,10 @@ abstract class AbstractRegenerateRewrites
                 $data,
                 ['request_path', 'metadata']
             );
-            $connection->commit();
+            $this->_commitTransaction($connection);
             $committed = true;
         } catch (\Exception $e) {
-            $connection->rollBack();
+            $this->_rollBackTransaction($connection);
 
             // one failure per entity whose rewrites were not saved (a category call can include children)
             $failed = [];
@@ -708,7 +731,7 @@ abstract class AbstractRegenerateRewrites
             'entity_type = ?' => $this->entityType,
             "entity_id NOT IN (SELECT entity_id FROM {$entityTable})",
         ];
-        $connection->beginTransaction();
+        $this->_beginTransaction($connection);
         try {
             $oldRows = [];
             if ($this->changeListener !== null) {
@@ -719,11 +742,11 @@ abstract class AbstractRegenerateRewrites
                 $oldRows = $connection->fetchAll($select);
             }
             $connection->delete($this->_getMainTableName(), $where);
-            $connection->commit();
+            $this->_commitTransaction($connection);
 
             $this->_queueRewriteChanges($oldRows, []);
         } catch (\Exception $e) {
-            $connection->rollBack();
+            $this->_rollBackTransaction($connection);
             $this->_addFailure($this->entityType, null, null, 'deleting orphaned rewrites failed: ' . $e->getMessage());
         }
         $this->_flushChanges();
@@ -738,16 +761,16 @@ abstract class AbstractRegenerateRewrites
      */
     protected function _updateSecondaryTable(): static
     {
-        $this->_getResourceConnection()->getConnection()->beginTransaction();
+        $this->_beginTransaction($this->_getResourceConnection()->getConnection());
         try {
             $this->_getResourceConnection()->getConnection()->delete(
                 $this->_getSecondaryTableName(),
                 "url_rewrite_id NOT IN (SELECT url_rewrite_id FROM {$this->_getMainTableName()})"
             );
-            $this->_getResourceConnection()->getConnection()->commit();
+            $this->_commitTransaction($this->_getResourceConnection()->getConnection());
 
         } catch (\Exception $e) {
-            $this->_getResourceConnection()->getConnection()->rollBack();
+            $this->_rollBackTransaction($this->_getResourceConnection()->getConnection());
             $this->_addFailure(
                 $this->entityType,
                 null,
@@ -788,22 +811,84 @@ abstract class AbstractRegenerateRewrites
             // This is the issue of Magento EE (Data integrity/assurance of the accuracy and consistency of data),
             // and this extension was made to not fix this; I just avoid this issue
             foreach ($data as $row) {
-                $this->_getResourceConnection()->getConnection()->beginTransaction();
+                $this->_beginTransaction($this->_getResourceConnection()->getConnection());
                 try {
                     $this->_getResourceConnection()->getConnection()->insertOnDuplicate(
                         $this->_getSecondaryTableName(),
                         $row,
                         ['product_id']
                     );
-                    $this->_getResourceConnection()->getConnection()->commit();
+                    $this->_commitTransaction($this->_getResourceConnection()->getConnection());
 
                 } catch (\Exception $e) {
-                    $this->_getResourceConnection()->getConnection()->rollBack();
+                    $this->_rollBackTransaction($this->_getResourceConnection()->getConnection());
                 }
             }
         }
 
         return $this;
+    }
+
+    /**
+     * Inside a caller's transaction (e.g. a dry run) use a savepoint: a nested adapter rollBack() would mark the
+     * caller's transaction as failed and make every later beginTransaction() of the process throw
+     *
+     * @param AdapterInterface $connection
+     * @return void
+     */
+    protected function _beginTransaction(AdapterInterface $connection): void
+    {
+        if ($connection->getTransactionLevel() > 0) {
+            if ($this->transactionLost) {
+                // as Magento's adapter refuses new transactions after a nested rollback
+                throw new \RuntimeException(self::ERROR_TRANSACTION_LOST);
+            }
+            $savepoint = 'okrur_' . count($this->transactionStack);
+            $connection->query('SAVEPOINT ' . $savepoint);
+            $this->transactionStack[] = $savepoint;
+
+            return;
+        }
+
+        $this->transactionLost = false;
+        $connection->beginTransaction();
+        $this->transactionStack[] = null;
+    }
+
+    /**
+     * @param AdapterInterface $connection
+     * @return void
+     */
+    protected function _commitTransaction(AdapterInterface $connection): void
+    {
+        $savepoint = array_pop($this->transactionStack);
+        if ($savepoint === null) {
+            $connection->commit();
+        } else {
+            $connection->query('RELEASE SAVEPOINT ' . $savepoint);
+        }
+    }
+
+    /**
+     * @param AdapterInterface $connection
+     * @return void
+     */
+    protected function _rollBackTransaction(AdapterInterface $connection): void
+    {
+        $savepoint = array_pop($this->transactionStack);
+        if ($savepoint === null) {
+            $connection->rollBack();
+
+            return;
+        }
+
+        try {
+            $connection->query('ROLLBACK TO SAVEPOINT ' . $savepoint);
+        } catch (\Exception $e) {
+            // the server already ended the transaction (e.g. a deadlock rolled it back): nothing left to undo here,
+            // and no further write may run until the caller ends its transaction
+            $this->transactionLost = true;
+        }
     }
 
     /**

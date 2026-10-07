@@ -191,6 +191,8 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
     public function startRun(): static
     {
         parent::startRun();
+        // the cascaded products' model has run state of its own (e.g. a transaction lost in the last run)
+        $this->regenerateProductRewrites->startRun();
         $this->changedUrlPathIds = [];
 
         return $this;

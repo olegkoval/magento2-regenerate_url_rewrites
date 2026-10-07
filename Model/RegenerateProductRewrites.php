@@ -313,7 +313,7 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
         $singleStore = $this->helper->getStoreManager()->hasSingleStore();
         $writeStoreId = $singleStore ? 0 : $storeId;
         $connection = $entity->getResource()->getConnection();
-        $connection->beginTransaction();
+        $this->_beginTransaction($connection);
         try {
             if (array_key_exists('url_key', $attributes)) {
                 $rows = $this->_readUrlAttributes($entity, array_unique([0, $writeStoreId]));
@@ -336,9 +336,9 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
             foreach ($attributes as $code => $value) {
                 $this->_writeUrlMaintenanceAttribute($entity, $code, $value, $writeStoreId, $singleStore);
             }
-            $connection->commit();
+            $this->_commitTransaction($connection);
         } catch (\Throwable $e) {
-            $connection->rollBack();
+            $this->_rollBackTransaction($connection);
             throw $e;
         }
     }

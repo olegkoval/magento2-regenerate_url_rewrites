@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
   [magento-extension-notifications](https://github.com/olegkoval/magento-extension-notifications) repository. Only a
   generic user agent is sent. Turn them off in `Stores > Configuration > Advanced > System > Notifications`, or per
   run with the new `--no-messages` option. See "Messages From the Author" in the README
+### Fixed
+- a failure inside a caller's database transaction (e.g. a data patch running the service) no longer makes every
+  later save of the run fail: the extension's own saves use savepoints there
 ### Changed
 - the module now depends on `Magento_AdminNotification` (part of Magento Open Source)
 - the Composer package no longer contains the unit tests (`Test/`) or the CI configuration (`.github/`)

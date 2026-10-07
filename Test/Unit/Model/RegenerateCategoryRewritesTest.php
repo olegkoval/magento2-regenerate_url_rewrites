@@ -272,6 +272,19 @@ class RegenerateCategoryRewritesTest extends TestCase
     /**
      * @return void
      */
+    public function testAStartedRunAlsoClearsTheCascadedProductModelsLostTransaction(): void
+    {
+        $scope = \OlegKoval\RegenerateUrlRewrites\Model\AbstractRegenerateRewrites::class;
+        (fn () => $this->transactionLost = true)->bindTo($this->productModel, $scope)();
+
+        $this->model->startRun();
+
+        self::assertFalse((fn (): bool => $this->transactionLost)->bindTo($this->productModel, $scope)());
+    }
+
+    /**
+     * @return void
+     */
     public function testExactModeRepathsDescendantsInStoreViewsAfterTheDefaultScopeChangedThePath(): void
     {
         $collection = $this->createMock(\Magento\Catalog\Model\ResourceModel\Category\Collection::class);

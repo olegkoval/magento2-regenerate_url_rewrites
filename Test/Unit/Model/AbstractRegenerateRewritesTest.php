@@ -125,6 +125,102 @@ class AbstractRegenerateRewritesTest extends TestCase
     /**
      * @return void
      */
+    public function testSaveUrlRewritesUsesItsOwnTransactionOutsideACallersOne(): void
+    {
+        $this->connection->method('getTransactionLevel')->willReturn(0);
+        $this->connection->expects(self::once())->method('beginTransaction');
+        $this->connection->expects(self::once())->method('commit');
+        $this->connection->expects(self::never())->method('query');
+
+        $this->model->saveUrlRewrites([$this->rewrite(1, 'a.html')]);
+    }
+
+    /**
+     * @return void
+     */
+    public function testInsideACallersTransactionSaveUrlRewritesUsesASavepoint(): void
+    {
+        $queries = [];
+        $this->connection->method('getTransactionLevel')->willReturn(1);
+        $this->connection->method('query')->willReturnCallback(function (string $sql) use (&$queries) {
+            $queries[] = $sql;
+            return $this->createMock(\Zend_Db_Statement_Interface::class);
+        });
+        $this->connection->expects(self::never())->method('beginTransaction');
+        $this->connection->expects(self::never())->method('commit');
+        $this->connection->expects(self::never())->method('rollBack');
+        $this->connection->method('insertOnDuplicate')->willReturnOnConsecutiveCalls(
+            1,
+            self::throwException(new \Exception('duplicate'))
+        );
+
+        $this->model->saveUrlRewrites([$this->rewrite(1, 'a.html')]);
+        $this->model->saveUrlRewrites([$this->rewrite(1, 'b.html')]);
+
+        self::assertSame([
+            'SAVEPOINT okrur_0',
+            'RELEASE SAVEPOINT okrur_0',
+            'SAVEPOINT okrur_0',
+            'ROLLBACK TO SAVEPOINT okrur_0',
+        ], $queries);
+        self::assertCount(1, $this->model->getFailures(), 'the failed save is reported, the run goes on');
+    }
+
+    /**
+     * @return void
+     */
+    public function testOnceTheCallersTransactionIsLostNothingMoreIsWritten(): void
+    {
+        $this->connection->method('getTransactionLevel')->willReturn(1);
+        $this->connection->method('query')->willReturnCallback(function (string $sql) {
+            if (str_starts_with($sql, 'ROLLBACK TO SAVEPOINT')) {
+                throw new \Exception('SAVEPOINT okrur_0 does not exist');
+            }
+            return $this->createMock(\Zend_Db_Statement_Interface::class);
+        });
+        // the deadlock: the server rolls back the caller's whole transaction
+        $this->connection->expects(self::once())->method('insertOnDuplicate')
+            ->willThrowException(new \Exception('Deadlock found when trying to get lock'));
+
+        $this->model->saveUrlRewrites([$this->rewrite(1, 'a.html')]);
+        self::assertCount(1, $this->model->getFailures());
+
+        // refused before anything is written, as Magento's adapter refuses after a nested rollback; the run's
+        // per-entity handling records it
+        $this->expectExceptionMessage('surrounding database transaction was lost');
+        $this->model->saveUrlRewrites([$this->rewrite(1, 'b.html')]);
+    }
+
+    /**
+     * @return void
+     */
+    public function testANewRunStartsWithoutTheLostTransactionOfTheLastOne(): void
+    {
+        $queries = [];
+        $this->connection->method('getTransactionLevel')->willReturn(1);
+        $this->connection->method('query')->willReturnCallback(function (string $sql) use (&$queries) {
+            $queries[] = $sql;
+            if ($sql === 'ROLLBACK TO SAVEPOINT okrur_0') {
+                throw new \Exception('SAVEPOINT okrur_0 does not exist');
+            }
+            return $this->createMock(\Zend_Db_Statement_Interface::class);
+        });
+        $this->connection->method('insertOnDuplicate')->willReturnOnConsecutiveCalls(
+            self::throwException(new \Exception('Deadlock found when trying to get lock')),
+            1
+        );
+        $this->model->saveUrlRewrites([$this->rewrite(1, 'a.html')]);
+
+        $this->model->startRun();
+        $this->model->saveUrlRewrites([$this->rewrite(1, 'b.html')]);
+
+        self::assertSame('RELEASE SAVEPOINT okrur_0', end($queries));
+        self::assertSame([], $this->model->getFailures());
+    }
+
+    /**
+     * @return void
+     */
     public function testSaveUrlRewritesWithOnlyEmptyPathsTouchesNothing(): void
     {
         $this->connection->expects(self::never())->method('beginTransaction');
