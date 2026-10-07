@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
   [magento-extension-notifications](https://github.com/olegkoval/magento-extension-notifications) repository. Only a
   generic user agent is sent. Turn them off in `Stores > Configuration > Advanced > System > Notifications`, or per
   run with the new `--no-messages` option. See "Messages From the Author" in the README
+- `--dry-run` (#149): preview a run — everything runs in one database transaction that is rolled back at the end,
+  so nothing is saved; prints a summary of what would change, and skips reindex and cache refresh. Can't be combined
+  with `--set-product-suffix`/`--set-category-suffix`. From code: `RunOptionsBuilder::setDryRun()`
 - `-v` prints every change a run makes (#91): URL rewrites added, removed or updated, and `url_key`/`url_path`
   changes with their scope, followed by a `Changes: …` summary. Without `-v` nothing is tracked, as before
 ### Fixed

@@ -86,6 +86,7 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
 | `--no-cache-clean` | Skip `cache:clean` at the end. |
 | `--no-cache-flush` | Skip `cache:flush` at the end. |
 | `--no-progress` | Hide the console progress bar. |
+| `--dry-run` | Preview a run: do everything, report what would change, then roll it all back — nothing is saved, no reindex or cache refresh. See [Notes & Caveats](#notes--caveats). |
 | `-v` | Print every change the run makes (URL rewrites added/removed/updated, `url_key`/`url_path` values) and a summary of them. |
 | `--no-messages` | Don't show messages from the extension author at the end of the run. See [Messages From the Author](#messages-from-the-author). |
 | `--delete-orphaned-rewrites` | Delete `url_rewrite` rows (for the given `--entity-type`) whose product/category no longer exists. |
@@ -147,6 +148,15 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
 * **Product `updated_at`** is left alone by a regeneration run (incl. products processed by category runs), so
   sitemap `lastmod`, delta syncs and "recently updated" reports don't see the whole catalog as changed. With
   `--regen-url-key`, a product's `updated_at` changes only when its URL key actually changes.
+
+* **`--dry-run`** runs the whole regeneration in one database transaction and rolls it back at the end, so the
+  preview is exact — even for cascades, like a parent category's new `url_key` changing its children's and
+  products' URLs. It prints `Changes: …` (with `-v` every change) and `Dry run: no changes were saved.`; reindex
+  and cache refresh are skipped. It can't be combined with `--set-product-suffix`/`--set-category-suffix` (Magento
+  keeps a saved suffix in memory, so it couldn't be undone reliably). Rows it touches stay locked until the end, so
+  admin saves of the same products/categories wait meanwhile (the storefront doesn't): preview targeted runs, or
+  large ones off-peak. If a save fails inside one of Magento's own transactions (e.g. a category's `url_key`), the
+  rest of that preview fails too — the failure list says so; fix the first failure and preview again.
 
 * **`--regen-url-key`** inverted its default behavior in 1.8.0: `url_key` is no longer regenerated
   automatically. Pass `--regen-url-key` explicitly whenever you want it regenerated too — see
@@ -227,6 +237,11 @@ pass an `Api\ChangeListenerInterface` as the third argument of `run()`: its `onC
 listener no extra queries run. The reports are complete enough to undo a run — except URL suffix changes
 (`setProductUrlSuffix()`/`setCategoryUrlSuffix()`) and the suffix swap Magento then applies to existing rewrites,
 which aren't reported.
+
+To **preview a run**, `setDryRun(true)`: the run happens in one transaction that is always rolled back (no reindex
+or cache refresh), and a change listener still receives every change. A dry run can't set a URL suffix, and `run()`
+throws `InputException` if a database transaction is already open, since rolling back would undo the caller's work
+too (e.g. in a data patch).
 
 `$result->getProcessedCounts()` has the entities the run went through (entity type → store ID → count).
 `$options->toArray()` / `$builder->fromArray($array)` log and replay a run; an unknown key or a value of the wrong

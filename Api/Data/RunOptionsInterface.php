@@ -107,6 +107,12 @@ interface RunOptionsInterface
     public function isFlushCache(): bool;
 
     /**
+     * @return bool run everything in one DB transaction and roll it back: nothing is saved, the change listener
+     *         still receives every change; reindex and cache refresh are skipped
+     */
+    public function isDryRun(): bool;
+
+    /**
      * Every option, keyed by its RunOptionsBuilder name (e.g. to log a run or replay it via
      * RunOptionsBuilder::fromArray())
      *

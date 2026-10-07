@@ -8,18 +8,22 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Model;
 
+use Magento\Catalog\Api\CategoryRepositoryInterface;
+use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Config\Console\Command\EmulatedAdminhtmlAreaProcessor;
 use Magento\Config\Model\Config\Factory as ConfigFactory;
 use Magento\Config\Model\Config\Reader\Source\Deployed\SettingChecker;
 use Magento\Framework\App\Cache\Manager as CacheManager;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\App\State as AppState;
+use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\Event\ManagerInterface as EventManager;
 use Magento\Framework\Exception\InputException;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Indexer\ConfigInterface as IndexerConfig;
 use Magento\Framework\Indexer\IndexerRegistry;
 use Magento\Framework\Indexer\StateInterface;
+use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 use Magento\Framework\Phrase;
 use Magento\Indexer\Model\Processor\MakeSharedIndexValid;
 use Magento\Store\Model\StoreManagerInterface;
@@ -102,6 +106,21 @@ class RegenerateService implements RegenerateServiceInterface
     private EventManager $eventManager;
 
     /**
+     * @var DryRunState
+     */
+    private DryRunState $dryRunState;
+
+    /**
+     * @var CategoryRepositoryInterface
+     */
+    private CategoryRepositoryInterface $categoryRepository;
+
+    /**
+     * @var ProductRepositoryInterface
+     */
+    private ProductRepositoryInterface $productRepository;
+
+    /**
      * store_id => code of every store, incl. store 0 ("admin"), as of the last validate()
      * @var array<int, string>|null
      */
@@ -132,6 +151,9 @@ class RegenerateService implements RegenerateServiceInterface
      * @param CacheManager $cacheManager
      * @param EmulatedAdminhtmlAreaProcessor $adminhtmlAreaProcessor
      * @param EventManager $eventManager
+     * @param DryRunState $dryRunState
+     * @param CategoryRepositoryInterface $categoryRepository
+     * @param ProductRepositoryInterface $productRepository
      */
     public function __construct(
         ResourceConnection $resource,
@@ -146,7 +168,10 @@ class RegenerateService implements RegenerateServiceInterface
         MakeSharedIndexValid $makeSharedIndexValid,
         CacheManager $cacheManager,
         EmulatedAdminhtmlAreaProcessor $adminhtmlAreaProcessor,
-        EventManager $eventManager
+        EventManager $eventManager,
+        DryRunState $dryRunState,
+        CategoryRepositoryInterface $categoryRepository,
+        ProductRepositoryInterface $productRepository
     ) {
         $this->resource = $resource;
         $this->appState = $appState;
@@ -161,6 +186,9 @@ class RegenerateService implements RegenerateServiceInterface
         $this->cacheManager = $cacheManager;
         $this->adminhtmlAreaProcessor = $adminhtmlAreaProcessor;
         $this->eventManager = $eventManager;
+        $this->dryRunState = $dryRunState;
+        $this->categoryRepository = $categoryRepository;
+        $this->productRepository = $productRepository;
     }
 
     /**
@@ -191,6 +219,12 @@ class RegenerateService implements RegenerateServiceInterface
         }
         if (count(array_diff($options->getStoreIds(), array_keys($this->_getAllStores()))) > 0) {
             $errors[] = (string)__('ERROR: store with this ID not exists.');
+        }
+
+        if ($options->isDryRun() && $this->_getSuffixesToSave($options)) {
+            // Magento keeps a saved suffix in memory (its config and URL path generators), with no way to reset it:
+            // after the rollback a later run in the same process would still use the previewed suffix
+            $errors[] = (string)__('ERROR: a dry run can\'t change the URL suffix.');
         }
 
         // a locked (app/etc/config.php) suffix would be skipped silently by the config save
@@ -246,6 +280,67 @@ class RegenerateService implements RegenerateServiceInterface
         ProgressReporterInterface $reporter,
         ?ChangeListenerInterface $changeListener
     ): RunResultInterface {
+        if (!$options->isDryRun()) {
+            return $this->_regenerate($options, $reporter, $changeListener);
+        }
+
+        // one transaction for the whole run, so the preview is exact: later entities read what earlier ones
+        // wrote (parent url_key -> child url_path -> product paths). autocommit off: should MySQL end the
+        // transaction itself (a deadlock), the statements after it still don't commit
+        $connection = $this->resource->getConnection();
+        if ($connection->getTransactionLevel() > 0) {
+            // its rollback would undo the caller's work too (e.g. a data patch, which Magento runs in a transaction)
+            throw new InputException(__('A dry run can\'t start inside an open database transaction.'));
+        }
+        $reporter->message('DRY RUN: nothing will be saved.');
+        $connection->query('SET autocommit = 0');
+        $this->dryRunState->setActive(true);
+        try {
+            $connection->beginTransaction();
+
+            return $this->_regenerate($options, $reporter, $changeListener);
+        } finally {
+            try {
+                // also unwinds a nested transaction a failure left open; the outermost rollBack() ends it all
+                while ($connection->getTransactionLevel() > 0) {
+                    $connection->rollBack();
+                }
+            } catch (\Exception $e) {
+                // the connection is gone (and with it the transaction): drop it, so the adapter doesn't stay at a
+                // transaction level nothing can commit or end; the next query connects anew
+                $this->dryRunState->setActive(false);
+                if ($connection instanceof \Zend_Db_Adapter_Abstract) {
+                    $connection->closeConnection();
+                }
+                if ($connection instanceof ResetAfterRequestInterface) {
+                    $connection->_resetState();
+                }
+                throw $e;
+            } finally {
+                $this->dryRunState->setActive(false);
+                $connection->query('SET autocommit = 1');
+                // the repositories keep the entities loaded during the preview, with its values
+                foreach ([$this->categoryRepository, $this->productRepository] as $repository) {
+                    if ($repository instanceof ResetAfterRequestInterface) {
+                        $repository->_resetState();
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @param RunOptionsInterface $options
+     * @param ProgressReporterInterface $reporter
+     * @param ChangeListenerInterface|null $changeListener
+     * @return RunResultInterface
+     * @throws InputException
+     */
+    private function _regenerate(
+        RunOptionsInterface $options,
+        ProgressReporterInterface $reporter,
+        ?ChangeListenerInterface $changeListener
+    ): RunResultInterface {
         $this->_saveSuffixes($options);
 
         $this->failures = [];
@@ -293,6 +388,12 @@ class RegenerateService implements RegenerateServiceInterface
         $reporter->message('');
         $reporter->message('');
 
+        if ($options->isDryRun()) {
+            $reporter->message('Dry run: reindex and cache refresh skipped.');
+
+            return $this->_createResult($regenerator, $processedStoreIds, $this->_getCutShortPreviewFailure($regenerator));
+        }
+
         if ($options->isReindex()) {
             $reporter->message('Reindexation...', false);
             $this->_reindexAll();
@@ -331,6 +432,7 @@ class RegenerateService implements RegenerateServiceInterface
             'includeNotVisible' => $options->isIncludeNotVisible(),
             'addSkuToUrl' => $options->isAddSkuToUrl(),
             'defaultScopeOnly' => $defaultScopeOnly,
+            'dryRun' => $options->isDryRun(),
         ];
     }
 
@@ -407,23 +509,53 @@ class RegenerateService implements RegenerateServiceInterface
     /**
      * @param AbstractRegenerateRewrites $regenerator
      * @param int[] $processedStoreIds
+     * @param array|null $leadingFailure counted and listed first, so the summary's capped list shows it
      * @return RunResultInterface
      */
     private function _createResult(
         AbstractRegenerateRewrites $regenerator,
-        array $processedStoreIds
+        array $processedStoreIds,
+        ?array $leadingFailure = null
     ): RunResultInterface {
         $counts = $regenerator->getFailureCounts();
         foreach ($this->failureCounts as $type => $count) {
             $counts[$type] = ($counts[$type] ?? 0) + $count;
         }
+        if ($leadingFailure !== null) {
+            $counts[$leadingFailure['entity_type']] = ($counts[$leadingFailure['entity_type']] ?? 0) + 1;
+        }
         $failures = array_slice(
-            array_merge($regenerator->getFailures(), $this->failures),
+            array_merge($leadingFailure !== null ? [$leadingFailure] : [], $regenerator->getFailures(), $this->failures),
             0,
             self::FAILURE_DETAILS_LIMIT
         );
 
         return new RunResult($counts, $failures, $processedStoreIds, $regenerator->getProcessedCounts());
+    }
+
+    /**
+     * @param AbstractRegenerateRewrites $regenerator
+     * @return array|null a failure explaining why the rest of the preview failed, if it did
+     */
+    private function _getCutShortPreviewFailure(AbstractRegenerateRewrites $regenerator): ?array
+    {
+        foreach ($regenerator->getFailures() as $failure) {
+            if (str_contains($failure['message'], AdapterInterface::ERROR_ROLLBACK_INCOMPLETE_MESSAGE)
+                || str_contains($failure['message'], AbstractRegenerateRewrites::ERROR_TRANSACTION_LOST)
+            ) {
+                // a failure inside one of Magento's own (nested) transactions, e.g. a category saveAttribute(), makes
+                // its adapter refuse every later transaction until the dry run's rollback
+                return [
+                    'entity_type' => $failure['entity_type'],
+                    'entity_id' => null,
+                    'store_id' => null,
+                    'message' => 'dry run: after a failed save inside a Magento transaction every later save of this'
+                        . ' preview failed too (nothing was saved); fix the first failure and preview again',
+                ];
+            }
+        }
+
+        return null;
     }
 
     /**

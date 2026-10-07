@@ -91,6 +91,13 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                     'Do not run cache:clean when URL rewrites are generated.'
                 ),
                 new InputOption(
+                    self::INPUT_KEY_DRY_RUN,
+                    null,
+                    InputOption::VALUE_NONE,
+                    'Run everything, report what would change (each change with -v), then roll it all back: nothing'
+                    . ' is saved; no reindex or cache refresh. Not with --set-*-suffix.'
+                ),
+                new InputOption(
                     self::INPUT_KEY_NO_MESSAGES,
                     null,
                     InputOption::VALUE_NONE,
@@ -208,8 +215,8 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             $runOptions = $this->buildRunOptions();
             $progressReporter = new ConsoleProgressReporter($this->_output, $this->_commandOptions['showProgress']);
             // tracking costs extra queries per entity, so only when the changes are shown
-            $changeReporter = $this->_output->isVerbose()
-                ? new ConsoleChangeReporter($progressReporter, true)
+            $changeReporter = $this->_output->isVerbose() || $runOptions->isDryRun()
+                ? new ConsoleChangeReporter($progressReporter, $this->_output->isVerbose())
                 : null;
             $result = $this->regenerateService->run($runOptions, $progressReporter, $changeReporter);
         } catch (InputException $e) {
@@ -229,6 +236,9 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             $this->_output->writeln($changeReporter->getSummary());
         }
         $this->_output->writeln($this->_getProcessedSummary($result->getProcessedCounts()));
+        if ($runOptions->isDryRun()) {
+            $this->_output->writeln('Dry run: no changes were saved.');
+        }
 
         if ($result->hasFailures()) {
             $this->_displayFailures($result->getFailureCounts(), $result->getFailures());
@@ -366,6 +376,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             ->setReindex($options['runReindex'])
             ->setCleanCache($options['runCacheClean'])
             ->setFlushCache($options['runCacheFlush'])
+            ->setDryRun($options['dryRun'] ?? false)
             ->create();
     }
 
@@ -443,6 +454,10 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
 
         if (isset($options[self::INPUT_KEY_NO_CACHE_FLUSH]) && $options[self::INPUT_KEY_NO_CACHE_FLUSH] === true) {
             $this->_commandOptions['runCacheFlush'] = false;
+        }
+
+        if (isset($options[self::INPUT_KEY_DRY_RUN]) && $options[self::INPUT_KEY_DRY_RUN] === true) {
+            $this->_commandOptions['dryRun'] = true;
         }
 
         if (isset($options[self::INPUT_KEY_PRODUCTS_RANGE])) {

@@ -36,6 +36,7 @@ class ProductUrlAttributesTest extends TestCase
             'single store changes default' => [true, 'custom', false, 'custom', 'default', true],
             'failed maintenance write' => [false, null, false, 'custom', 'default', false, true],
             'NULL override changes effective key' => [false, 'default', true, null, 'default', true],
+            'changed key in a dry run' => [false, 'new', false, 'custom', 'default', false, false, true],
         ];
     }
 
@@ -48,6 +49,7 @@ class ProductUrlAttributesTest extends TestCase
      * @param string $defaultKey
      * @param bool $touch
      * @param bool $failWrite
+     * @param bool $dryRun
      * @return void
      */
     public function testOnlyAChangedKeyUsesTheTimestampUpdatingAction(
@@ -57,7 +59,8 @@ class ProductUrlAttributesTest extends TestCase
         ?string $storeKey,
         string $defaultKey,
         bool $touch,
-        bool $failWrite = false
+        bool $failWrite = false,
+        bool $dryRun = false
     ): void {
         $connection = $this->createMock(AdapterInterface::class);
         $connection->expects(self::once())->method('beginTransaction');
@@ -133,6 +136,7 @@ class ProductUrlAttributesTest extends TestCase
                 return ['url_key' => [0 => [true, $this->defaultKey], 2 => [true, $this->storeKey]]];
             }
         };
+        $model->setRegenerateOptions(['dryRun' => $dryRun]);
         $attributes = ['url_path' => null];
         if ($key !== null) {
             $attributes['url_key'] = $key;
@@ -150,5 +154,9 @@ class ProductUrlAttributesTest extends TestCase
             self::assertContains(['attribute_id = ?' => 12, 'row_id = ?' => 42, 'store_id = ?' => 2], $deletes);
         }
         self::assertCount($key !== null && !$touch && (!$inherit || $singleStore) ? 2 : 1, $rows);
+        if ($dryRun) {
+            // the changed key is written directly, without the mass action's reindex and cache purge
+            self::assertSame(['attribute_id' => 12, 'row_id' => 42, 'store_id' => 2, 'value' => 'new'], $rows[1]);
+        }
     }
 }

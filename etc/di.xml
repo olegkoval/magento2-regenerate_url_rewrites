@@ -29,6 +29,10 @@
             </argument>
         </arguments>
     </type>
+    <!-- a dry run must not continue on a reconnected (autocommitting) connection -->
+    <type name="Magento\Framework\DB\Adapter\Pdo\Mysql">
+        <plugin name="olegkoval_regenerateurlrewrites_dry_run_guard" type="OlegKoval\RegenerateUrlRewrites\Plugin\DryRunConnectionGuard"/>
+    </type>
     <type name="Magento\Framework\Console\CommandListInterface">
         <arguments>
             <argument name="commands" xsi:type="array">

@@ -39,6 +39,7 @@ class RunOptionsBuilder
         'reindex' => true,
         'cleanCache' => true,
         'flushCache' => true,
+        'dryRun' => false,
     ];
 
     /**
@@ -229,6 +230,17 @@ class RunOptionsBuilder
     public function setFlushCache(bool $value): static
     {
         $this->values['flushCache'] = $value;
+
+        return $this;
+    }
+
+    /**
+     * @param bool $value run everything, then roll it all back; no reindex or cache refresh
+     * @return $this
+     */
+    public function setDryRun(bool $value): static
+    {
+        $this->values['dryRun'] = $value;
 
         return $this;
     }

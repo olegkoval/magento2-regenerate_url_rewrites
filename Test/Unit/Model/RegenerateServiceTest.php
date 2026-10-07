@@ -133,6 +133,39 @@ class RegenerateServiceTest extends TestCase
     private RegenerateService $service;
 
     /**
+     * transaction calls and queries on the connection, in order
+     * @var string[]
+     */
+    private array $sqlLog = [];
+
+    /**
+     * the connection's transaction level
+     * @var int
+     */
+    private int $transactionLevel = 0;
+
+    /**
+     * @var \OlegKoval\RegenerateUrlRewrites\Model\DryRunState
+     */
+    private $dryRunState;
+
+    /**
+     * @var \Magento\Catalog\Model\CategoryRepository&MockObject
+     */
+    private $categoryRepository;
+
+    /**
+     * @var AdapterInterface&MockObject
+     */
+    private $connection;
+
+    /**
+     * dry-run state seen by the model while it ran
+     * @var bool|null
+     */
+    private ?bool $activeDuringRun = null;
+
+    /**
      * @return void
      */
     protected function setUp(): void
@@ -140,9 +173,26 @@ class RegenerateServiceTest extends TestCase
         $select = $this->createMock(Select::class);
         $select->method('from')->willReturnSelf();
         $select->method('order')->willReturnSelf();
-        $connection = $this->createMock(AdapterInterface::class);
+        $connection = $this->createMockForIntersectionOfInterfaces(
+            [AdapterInterface::class, \Magento\Framework\ObjectManager\ResetAfterRequestInterface::class]
+        );
         $connection->method('select')->willReturn($select);
         $connection->method('fetchAll')->willReturnCallback(fn (): array => $this->storeRows);
+        $connection->method('getTransactionLevel')->willReturnCallback(fn (): int => $this->transactionLevel);
+        $connection->method('beginTransaction')->willReturnCallback(function () use ($connection) {
+            $this->sqlLog[] = 'begin';
+            $this->transactionLevel++;
+            return $connection;
+        });
+        $connection->method('rollBack')->willReturnCallback(function () use ($connection) {
+            $this->sqlLog[] = 'rollback';
+            $this->transactionLevel--;
+            return $connection;
+        });
+        $connection->method('query')->willReturnCallback(function (string $sql) {
+            $this->sqlLog[] = $sql;
+            return $this->createMock(\Zend_Db_Statement_Interface::class);
+        });
         $resource = $this->createMock(ResourceConnection::class);
         $resource->method('getConnection')->willReturn($connection);
         $resource->method('getTableName')->willReturnArgument(0);
@@ -161,6 +211,11 @@ class RegenerateServiceTest extends TestCase
              * @var bool
              */
             public bool $orphansDeleted = false;
+
+            /**
+             * @var string message of the failure in store 2
+             */
+            public string $failureMessage = 'bad';
 
             /**
              * @var bool
@@ -196,7 +251,7 @@ class RegenerateServiceTest extends TestCase
                 $this->hadReporter = $this->progressReporter !== null;
                 $this->hadListener = $this->changeListener;
                 if ($storeId === 2) {
-                    $this->_addFailure('product', 5, 2, 'bad');
+                    $this->_addFailure('product', 5, 2, $this->failureMessage);
                 }
 
                 return $this;
@@ -292,6 +347,13 @@ class RegenerateServiceTest extends TestCase
             return $callback();
         });
 
+        $this->dryRunState = new \OlegKoval\RegenerateUrlRewrites\Model\DryRunState();
+        $this->categoryRepository = $this->getMockBuilder(\Magento\Catalog\Model\CategoryRepository::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['_resetState'])
+            ->getMock();
+        $this->connection = $connection;
+
         $this->service = new RegenerateService(
             $resource,
             $this->appState,
@@ -305,7 +367,10 @@ class RegenerateServiceTest extends TestCase
             $makeSharedIndexValid,
             $this->cacheManager,
             $this->areaProcessor,
-            $this->eventManager
+            $this->eventManager,
+            $this->dryRunState,
+            $this->categoryRepository,
+            $this->createMock(\Magento\Catalog\Api\ProductRepositoryInterface::class)
         );
     }
 
@@ -677,6 +742,166 @@ class RegenerateServiceTest extends TestCase
         }
 
         self::assertSame([], $this->productModel->runs);
+    }
+
+    /**
+     * @return void
+     */
+    public function testADryRunRunsInOneTransactionThatIsAlwaysRolledBackAndSkipsReindexAndCache(): void
+    {
+        $this->indexers = ['catalog_url' => [StateInterface::STATUS_VALID, null, null]];
+        $reporter = $this->reporter();
+        $this->storeManager->method('setCurrentStore')->willReturnCallback(function (): void {
+            $this->activeDuringRun ??= $this->dryRunState->isActive();
+        });
+        $this->categoryRepository->expects(self::once())->method('_resetState');
+
+        $result = $this->service->run(
+            $this->options()->setDryRun(true)->setReindex(true)->setCleanCache(true)->setFlushCache(true)->create(),
+            $reporter
+        );
+
+        self::assertSame(['SET autocommit = 0', 'begin', 'rollback', 'SET autocommit = 1'], $this->sqlLog);
+        self::assertSame([0, 1, 2], array_keys($this->productModel->runs));
+        self::assertTrue($this->productModel->runs[1]['dryRun'], 'the models know, e.g. to skip the mass action');
+        self::assertTrue($result->hasFailures());
+        self::assertSame([], $this->reindexed);
+        self::assertSame([], $this->cacheSteps);
+        self::assertStringStartsWith("DRY RUN: nothing will be saved.\n", $reporter->text);
+        self::assertStringContainsString('Dry run: reindex and cache refresh skipped.', $reporter->text);
+        self::assertTrue($this->activeDuringRun, 'the connection guard is on during the run');
+        self::assertFalse($this->dryRunState->isActive());
+    }
+
+    /**
+     * @return void
+     */
+    public function testWhenTheConnectionIsGoneTheDryRunDropsItAndTheAdapterState(): void
+    {
+        $this->connection->method('rollBack')->willThrowException(new \Exception('MySQL server has gone away'));
+        $this->connection->expects(self::once())->method('_resetState');
+
+        try {
+            $this->service->run($this->options()->setDryRun(true)->create());
+            self::fail('the rollback failure is rethrown');
+        } catch (\Exception $e) {
+            self::assertSame('MySQL server has gone away', $e->getMessage());
+        }
+
+        self::assertFalse($this->dryRunState->isActive());
+        self::assertSame('SET autocommit = 1', end($this->sqlLog));
+    }
+
+    /**
+     * @return void
+     */
+    public function testADryRunCanNotChangeTheUrlSuffix(): void
+    {
+        $options = $this->options()->setDryRun(true)->setProductUrlSuffix('.htm')->create();
+
+        self::assertSame(["ERROR: a dry run can't change the URL suffix."], $this->service->validate($options));
+        $this->expectException(InputException::class);
+        try {
+            $this->service->run($options);
+        } finally {
+            self::assertSame([], $this->sqlLog);
+            self::assertSame([], $this->savedConfig);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    public function testADryRunStoppedByTheCallerIsRolledBack(): void
+    {
+        $reporter = new class () extends \OlegKoval\RegenerateUrlRewrites\Model\NullProgressReporter {
+            /**
+             * @param string $text
+             * @param bool $newLine
+             * @return void
+             */
+            public function message(string $text, bool $newLine = true): void
+            {
+                if (str_contains($text, 'Store ID: 1')) {
+                    throw new \RuntimeException('stop');
+                }
+            }
+        };
+
+        try {
+            $this->service->run($this->options()->setDryRun(true)->create(), $reporter);
+            self::fail('the exception is rethrown');
+        } catch (\RuntimeException $e) {
+            self::assertSame('stop', $e->getMessage());
+        }
+
+        self::assertSame(['SET autocommit = 0', 'begin', 'rollback', 'SET autocommit = 1'], $this->sqlLog);
+        self::assertSame(0, $this->transactionLevel);
+    }
+
+    /**
+     * @return void
+     */
+    public function testADryRunCutShortByAMagentoTransactionSaysSo(): void
+    {
+        $this->productModel->failureMessage = 'saving url_key failed: '
+            . AdapterInterface::ERROR_ROLLBACK_INCOMPLETE_MESSAGE;
+
+        $result = $this->service->run($this->options()->setDryRun(true)->create());
+
+        self::assertSame(['product' => 2], $result->getFailureCounts());
+        self::assertStringStartsWith(
+            'dry run: after a failed save inside a Magento transaction',
+            $result->getFailures()[0]['message']
+        );
+
+        $ordinary = $this->service->run($this->options()->create());
+        self::assertSame(['product' => 1], $ordinary->getFailureCounts());
+    }
+
+    /**
+     * @return void
+     */
+    public function testADryRunUnwindsANestedTransactionLeftOpen(): void
+    {
+        $this->storeManager->method('setCurrentStore')->willReturnCallback(function (): void {
+            // a Magento-internal transaction a failure left open
+            $this->transactionLevel = 2;
+        });
+
+        $this->service->run($this->options()->setDryRun(true)->setStoreIds([1])->create());
+
+        self::assertSame(0, $this->transactionLevel);
+        self::assertSame('SET autocommit = 1', end($this->sqlLog));
+    }
+
+    /**
+     * @return void
+     */
+    public function testADryRunRefusesToStartInsideTheCallersTransaction(): void
+    {
+        $this->transactionLevel = 1;
+
+        try {
+            $this->service->run($this->options()->setDryRun(true)->create());
+            self::fail('InputException expected');
+        } catch (InputException $e) {
+            self::assertStringContainsString('inside an open database transaction', $e->getMessage());
+        }
+
+        self::assertSame([], $this->sqlLog);
+        self::assertSame([], $this->productModel->runs);
+        self::assertSame(1, $this->transactionLevel);
+    }
+
+    /**
+     * @return void
+     */
+    public function testAnOrdinaryRunOpensNoTransaction(): void
+    {
+        $this->service->run($this->options()->create());
+
+        self::assertSame([], $this->sqlLog);
     }
 
     /**

@@ -320,7 +320,9 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
                 $oldKey = $rows['url_key'][$writeStoreId][0]
                     ? $rows['url_key'][$writeStoreId][1]
                     : $rows['url_key'][0][1];
-                if ($attributes['url_key'] !== $oldKey) {
+                // a dry run writes the key directly: the mass action would also reindex (Update on Save) and purge
+                // page caches right away, which its rollback can't undo
+                if ($attributes['url_key'] !== $oldKey && !$this->regenerateOptions['dryRun']) {
                     $this->_getProductAction()->updateAttributes(
                         [$entity->getId()],
                         ['url_key' => $attributes['url_key']],

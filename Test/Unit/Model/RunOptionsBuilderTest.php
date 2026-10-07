@@ -37,6 +37,7 @@ class RunOptionsBuilderTest extends TestCase
         self::assertTrue($options->isReindex());
         self::assertTrue($options->isCleanCache());
         self::assertTrue($options->isFlushCache());
+        self::assertFalse($options->isDryRun());
     }
 
     /**
@@ -62,6 +63,7 @@ class RunOptionsBuilderTest extends TestCase
             ->setReindex(false)
             ->setCleanCache(false)
             ->setFlushCache(false)
+            ->setDryRun(true)
             ->create();
 
         self::assertSame('category', $options->getEntityType());
@@ -81,6 +83,7 @@ class RunOptionsBuilderTest extends TestCase
         self::assertFalse($options->isReindex());
         self::assertFalse($options->isCleanCache());
         self::assertFalse($options->isFlushCache());
+        self::assertTrue($options->isDryRun());
     }
 
     /**
@@ -116,6 +119,7 @@ class RunOptionsBuilderTest extends TestCase
             'reindex' => false,
             'cleanCache' => false,
             'flushCache' => false,
+            'dryRun' => true,
         ];
 
         $options = (new RunOptionsBuilder())->fromArray($values)->create();

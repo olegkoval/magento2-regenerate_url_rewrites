@@ -120,6 +120,7 @@ abstract class AbstractRegenerateRewrites
         'skipSecondaryTableUpdate' => false,
         'exactCategories' => false,
         'progressPassStarted' => false,
+        'dryRun' => false,
     ];
 
     /**

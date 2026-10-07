@@ -240,8 +240,25 @@ Finished",
         );
 
         self::assertNotNull($service->listener);
+        self::assertFalse($service->options->isDryRun());
         self::assertStringContainsString("  - product 7 (store 1): gone.html\n", $text);
         self::assertStringEndsWith("Changes: 1 removed\nProcessed: nothing\nFinished", trim($text));
+    }
+
+    /**
+     * @return void
+     */
+    public function testDryRunSummarisesTheChangesAndSaysNothingWasSaved(): void
+    {
+        [$code, $text, $service] = $this->execute(new RunResult([], [], [1]), null, ['dryRun' => true]);
+
+        self::assertSame(0, $code);
+        self::assertTrue($service->options->isDryRun());
+        self::assertStringNotContainsString('gone.html', $text, 'each change only with -v');
+        self::assertStringEndsWith(
+            "Changes: 1 removed\nProcessed: nothing\nDry run: no changes were saved.\nFinished",
+            trim($text)
+        );
     }
 
     /**
@@ -394,6 +411,7 @@ Finished",
                 'setProductSuffix' => '.htm',
                 'setCategorySuffix' => null,
                 'defaultScopeOnly' => false,
+                'dryRun' => false,
             ], $commandOptions);
         })->call($command);
 

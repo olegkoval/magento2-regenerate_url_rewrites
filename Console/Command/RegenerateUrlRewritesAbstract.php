@@ -42,6 +42,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
     const INPUT_KEY_NO_CACHE_FLUSH = 'no-cache-flush';
     const INPUT_KEY_NO_CACHE_CLEAN = 'no-cache-clean';
     const INPUT_KEY_NO_MESSAGES = 'no-messages';
+    const INPUT_KEY_DRY_RUN = 'dry-run';
     const INPUT_KEY_CATEGORIES_RANGE = 'categories-range';
     const INPUT_KEY_PRODUCTS_RANGE = 'products-range';
     const INPUT_KEY_CATEGORY_ID = 'category-id';
@@ -181,6 +182,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
         $this->_commandOptions['setProductSuffix'] = null;
         $this->_commandOptions['setCategorySuffix'] = null;
         $this->_commandOptions['defaultScopeOnly'] = false;
+        $this->_commandOptions['dryRun'] = false;
     }
 
     /**

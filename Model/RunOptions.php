@@ -165,6 +165,14 @@ class RunOptions implements RunOptionsInterface
     }
 
     /**
+     * @return bool
+     */
+    public function isDryRun(): bool
+    {
+        return $this->values['dryRun'];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(): array
