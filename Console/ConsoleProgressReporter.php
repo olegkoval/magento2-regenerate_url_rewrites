@@ -50,6 +50,12 @@ class ConsoleProgressReporter implements ProgressReporterInterface
     private bool $lineEnded = true;
 
     /**
+     * A message() without a newline left its line open (e.g. "Deleting orphaned url_rewrite rows..." before " Done")
+     * @var bool
+     */
+    private bool $messageLineOpen = false;
+
+    /**
      * @param OutputInterface $output
      * @param bool $showBar false (--no-progress): status lines only
      */
@@ -126,6 +132,30 @@ class ConsoleProgressReporter implements ProgressReporterInterface
     public function message(string $text, bool $newLine = true): void
     {
         $this->output->write($text, $newLine);
+        $this->messageLineOpen = !$newLine;
+    }
+
+    /**
+     * A full line of its own: in the middle of a bar the bar is cleared first and redrawn below the line
+     *
+     * @param string $text
+     * @return void
+     */
+    public function line(string $text): void
+    {
+        if (!$this->showBar || $this->lineEnded) {
+            if ($this->messageLineOpen) {
+                $this->output->writeln('');
+                $this->messageLineOpen = false;
+            }
+            $this->output->writeln($text);
+
+            return;
+        }
+
+        $this->_write("\r" . str_repeat(' ', self::SIZE + 40) . "\r");
+        $this->output->writeln($text);
+        $this->_draw();
     }
 
     /**

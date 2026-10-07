@@ -12,6 +12,7 @@ namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
 
 use Magento\Framework\Exception\InputException;
 use OlegKoval\RegenerateUrlRewrites\Api\Data\RunOptionsInterface;
+use OlegKoval\RegenerateUrlRewrites\Console\ConsoleChangeReporter;
 use OlegKoval\RegenerateUrlRewrites\Console\ConsoleProgressReporter;
 use OlegKoval\RegenerateUrlRewrites\Model\RunOptionsBuilder;
 use Symfony\Component\Console\Command\Command;
@@ -204,10 +205,13 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         }
 
         try {
-            $result = $this->regenerateService->run(
-                $this->buildRunOptions(),
-                new ConsoleProgressReporter($this->_output, $this->_commandOptions['showProgress'])
-            );
+            $runOptions = $this->buildRunOptions();
+            $progressReporter = new ConsoleProgressReporter($this->_output, $this->_commandOptions['showProgress']);
+            // tracking costs extra queries per entity, so only when the changes are shown
+            $changeReporter = $this->_output->isVerbose()
+                ? new ConsoleChangeReporter($progressReporter, true)
+                : null;
+            $result = $this->regenerateService->run($runOptions, $progressReporter, $changeReporter);
         } catch (InputException $e) {
             foreach ($e->getErrors() ?: [$e] as $error) {
                 $this->_addConsoleMsg($error->getMessage());
@@ -221,6 +225,9 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
         $this->_showSupportMe();
         $this->_showAuthorMessages();
 
+        if ($changeReporter !== null) {
+            $this->_output->writeln($changeReporter->getSummary());
+        }
         $this->_output->writeln($this->_getProcessedSummary($result->getProcessedCounts()));
 
         if ($result->hasFailures()) {

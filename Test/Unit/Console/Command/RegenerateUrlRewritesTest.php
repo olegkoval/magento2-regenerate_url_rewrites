@@ -215,6 +215,38 @@ Finished",
     /**
      * @return void
      */
+    public function testAnOrdinaryRunTracksNoChanges(): void
+    {
+        [, $text, $service] = $this->execute(new RunResult([], [], [1]));
+
+        self::assertNull($service->listener);
+        self::assertStringNotContainsString('Changes:', $text);
+        self::assertStringNotContainsString('gone.html', $text);
+    }
+
+    /**
+     * @return void
+     */
+    public function testVerboseRunPrintsEachChangeAndTheirSummaryBeforeProcessed(): void
+    {
+        [, $text, $service] = $this->execute(
+            new RunResult([], [], [1]),
+            null,
+            [],
+            [],
+            [],
+            true,
+            OutputInterface::VERBOSITY_VERBOSE
+        );
+
+        self::assertNotNull($service->listener);
+        self::assertStringContainsString("  - product 7 (store 1): gone.html\n", $text);
+        self::assertStringEndsWith("Changes: 1 removed\nProcessed: nothing\nFinished", trim($text));
+    }
+
+    /**
+     * @return void
+     */
     public function testOnlyAnInteractiveRunWritingToATerminalCountsAsTerminalRun(): void
     {
         $command = (new \ReflectionClass(RegenerateUrlRewrites::class))->newInstanceWithoutConstructor();
@@ -237,6 +269,7 @@ Finished",
      * @param array $messages what the author's feed returns
      * @param array $extraInput more command-line options
      * @param bool $interactive false: a cron/pipe run
+     * @param int $verbosity
      * @return array{0: int, 1: string, 2: object}
      */
     private function execute(
@@ -245,13 +278,19 @@ Finished",
         array $commandOptions = [],
         array $messages = [],
         array $extraInput = [],
-        bool $interactive = true
+        bool $interactive = true,
+        int $verbosity = OutputInterface::VERBOSITY_NORMAL
     ): array {
         $service = new class ($outcome) implements RegenerateServiceInterface {
             /**
              * @var RunOptionsInterface|null
              */
             public ?RunOptionsInterface $options = null;
+
+            /**
+             * @var \OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface|null
+             */
+            public $listener = null;
 
             /**
              * @param RunResult|InputException $outcome
@@ -281,6 +320,16 @@ Finished",
                 ?\OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface $changeListener = null
             ): RunResultInterface {
                 $this->options = $options;
+                $this->listener = $changeListener;
+                $changeListener?->onChange(new \OlegKoval\RegenerateUrlRewrites\Model\Change(
+                    'rewrite_removed',
+                    'product',
+                    7,
+                    1,
+                    'gone.html',
+                    null,
+                    ['request_path' => 'gone.html', 'redirect_type' => 0]
+                ));
                 if ($this->outcome instanceof InputException) {
                     throw $this->outcome;
                 }
@@ -357,7 +406,7 @@ Finished",
             $definition
         );
         $input->setInteractive($interactive);
-        $output = new BufferedOutput();
+        $output = new BufferedOutput($verbosity);
         $code = (new \ReflectionMethod($command, 'execute'))->invoke($command, $input, $output);
 
         return [$code, $output->fetch(), $service];

@@ -86,6 +86,7 @@ Keep reading for the full options reference, or jump to [More Examples](#more-ex
 | `--no-cache-clean` | Skip `cache:clean` at the end. |
 | `--no-cache-flush` | Skip `cache:flush` at the end. |
 | `--no-progress` | Hide the console progress bar. |
+| `-v` | Print every change the run makes (URL rewrites added/removed/updated, `url_key`/`url_path` values) and a summary of them. |
 | `--no-messages` | Don't show messages from the extension author at the end of the run. See [Messages From the Author](#messages-from-the-author). |
 | `--delete-orphaned-rewrites` | Delete `url_rewrite` rows (for the given `--entity-type`) whose product/category no longer exists. |
 | `--skip-existing` | Skip an entity entirely if it already has any URL Rewrite for the current store, instead of always deleting + regenerating. |

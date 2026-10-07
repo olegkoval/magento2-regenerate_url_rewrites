@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
   [magento-extension-notifications](https://github.com/olegkoval/magento-extension-notifications) repository. Only a
   generic user agent is sent. Turn them off in `Stores > Configuration > Advanced > System > Notifications`, or per
   run with the new `--no-messages` option. See "Messages From the Author" in the README
+- `-v` prints every change a run makes (#91): URL rewrites added, removed or updated, and `url_key`/`url_path`
+  changes with their scope, followed by a `Changes: …` summary. Without `-v` nothing is tracked, as before
 ### Fixed
 - a failure inside a caller's database transaction (e.g. a data patch running the service) no longer makes every
   later save of the run fail: the extension's own saves use savepoints there

@@ -82,4 +82,60 @@ class ConsoleProgressReporterTest extends TestCase
 
         self::assertSame("Reindexation... Done\n", $output->fetch());
     }
+
+    /**
+     * @return void
+     */
+    public function testALineInTheMiddleOfABarClearsItAndRedrawsItBelow(): void
+    {
+        $output = new BufferedOutput();
+        $reporter = new ConsoleProgressReporter($output);
+
+        $reporter->start('product', 1, 2);
+        $reporter->advance();
+        $output->fetch();
+        $reporter->line('  + product 1 (store 1): a.html');
+
+        self::assertSame(
+            "\r" . str_repeat(' ', 110) . "\r  + product 1 (store 1): a.html\n"
+            . "\r[" . str_repeat('=', 35) . '>' . str_repeat(' ', 35) . "] 50%  1/2",
+            $output->fetch()
+        );
+    }
+
+    /**
+     * @return void
+     */
+    public function testALineWithoutABarOrAfterItsEndIsAPlainLine(): void
+    {
+        $output = new BufferedOutput();
+        (new ConsoleProgressReporter($output, false))->line('x');
+        self::assertSame("x\n", $output->fetch());
+
+        $reporter = new ConsoleProgressReporter($output);
+        $reporter->start('product', 1, 1);
+        $reporter->advance();
+        $output->fetch();
+        $reporter->line('y');
+        self::assertSame("y\n", $output->fetch());
+    }
+
+    /**
+     * @return void
+     */
+    public function testALineAfterAnOpenMessageLineStartsOnANewLine(): void
+    {
+        $output = new BufferedOutput();
+        $reporter = new ConsoleProgressReporter($output);
+
+        $reporter->message('Deleting orphaned url_rewrite rows...', false);
+        $reporter->line('  - product 9 (store 1): a.html');
+        $reporter->message(' Done');
+        $reporter->line('x');
+
+        self::assertSame(
+            "Deleting orphaned url_rewrite rows...\n  - product 9 (store 1): a.html\n Done\nx\n",
+            $output->fetch()
+        );
+    }
 }
