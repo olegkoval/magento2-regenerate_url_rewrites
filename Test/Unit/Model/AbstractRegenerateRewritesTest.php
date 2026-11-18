@@ -364,7 +364,7 @@ class AbstractRegenerateRewritesTest extends TestCase
         $resource->method('getLinkField')->willReturn('row_id');
         $resource->method('getConnection')->willReturn($connection);
         $product = $this->createMock(\Magento\Catalog\Model\Product::class);
-        $product->method('getResource')->willReturn($resource);
+        (fn () => $this->entityResource = $resource)->call($this->model);
         $product->method('getData')->with('row_id')->willReturn('905');
 
         $this->invoke('_deleteStoreUrlKey', $product, 2);

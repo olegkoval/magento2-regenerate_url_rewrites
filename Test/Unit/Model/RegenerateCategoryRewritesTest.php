@@ -11,6 +11,7 @@ namespace OlegKoval\RegenerateUrlRewrites\Test\Unit\Model;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateCategoryRewrites;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class RegenerateCategoryRewritesTest extends TestCase
 {
@@ -275,11 +276,12 @@ class RegenerateCategoryRewritesTest extends TestCase
     public function testAStartedRunAlsoClearsTheCascadedProductModelsLostTransaction(): void
     {
         $scope = \OlegKoval\RegenerateUrlRewrites\Model\AbstractRegenerateRewrites::class;
-        (fn () => $this->transactionLost = true)->bindTo($this->productModel, $scope)();
+        $property = new \ReflectionProperty($scope, 'transactionLost');
+        $property->setValue($this->productModel, true);
 
         $this->model->startRun();
 
-        self::assertFalse((fn (): bool => $this->transactionLost)->bindTo($this->productModel, $scope)());
+        self::assertFalse($property->getValue($this->productModel));
     }
 
     /**
@@ -409,6 +411,7 @@ class RegenerateCategoryRewritesTest extends TestCase
      * @param array $expectedDescendantPasses [[changed IDs, excluded IDs, regenUrlKey during the pass], ...]
      * @return void
      */
+    #[DataProvider('exactModeCases')]
     public function testExactModeProcessesDescendantsOnlyWhereAPathChanged(
         bool $exact,
         array $changedIds,

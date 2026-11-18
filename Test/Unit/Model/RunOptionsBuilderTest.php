@@ -10,6 +10,7 @@ namespace OlegKoval\RegenerateUrlRewrites\Test\Unit\Model;
 
 use OlegKoval\RegenerateUrlRewrites\Model\RunOptionsBuilder;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class RunOptionsBuilderTest extends TestCase
 {
@@ -164,6 +165,7 @@ class RunOptionsBuilderTest extends TestCase
      * @param array $values
      * @return void
      */
+    #[DataProvider('invalidArrays')]
     public function testAnInvalidArrayIsRejectedAndSetsNothing(array $values): void
     {
         $builder = (new RunOptionsBuilder())->setProductIds([7]);

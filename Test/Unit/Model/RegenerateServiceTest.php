@@ -173,9 +173,7 @@ class RegenerateServiceTest extends TestCase
         $select = $this->createMock(Select::class);
         $select->method('from')->willReturnSelf();
         $select->method('order')->willReturnSelf();
-        $connection = $this->createMockForIntersectionOfInterfaces(
-            [AdapterInterface::class, \Magento\Framework\ObjectManager\ResetAfterRequestInterface::class]
-        );
+        $connection = $this->createMock(ResettableAdapterInterface::class);
         $connection->method('select')->willReturn($select);
         $connection->method('fetchAll')->willReturnCallback(fn (): array => $this->storeRows);
         $connection->method('getTransactionLevel')->willReturnCallback(fn (): int => $this->transactionLevel);

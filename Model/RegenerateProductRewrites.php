@@ -10,6 +10,7 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Model;
 
+use Magento\Catalog\Model\ResourceModel\Product as ProductResource;
 use Magento\Catalog\Model\Product\Visibility;
 use Magento\Catalog\Model\ResourceModel\Product\Action;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;
@@ -75,20 +76,23 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
      * @param RegenerateHelper $helper
      * @param ResourceConnection $resourceConnection
      * @param ProductActionFactory $productActionFactory
-     * @param ProductUrlRewriteGeneratorFactory\Proxy $productUrlRewriteGeneratorFactory
-     * @param ProductUrlPathGeneratorFactory\Proxy $productUrlPathGeneratorFactory
+     * @param ProductUrlRewriteGeneratorFactory $productUrlRewriteGeneratorFactory
+     * @param ProductUrlPathGeneratorFactory $productUrlPathGeneratorFactory
      * @param ProductCollectionFactory $productCollectionFactory
+     * @param ProductResource|null $entityResource
      */
     public function __construct(
-        RegenerateHelper                        $helper,
-        ResourceConnection                      $resourceConnection,
-        ProductActionFactory                    $productActionFactory,
-        ProductUrlRewriteGeneratorFactory\Proxy $productUrlRewriteGeneratorFactory,
-        ProductUrlPathGeneratorFactory\Proxy    $productUrlPathGeneratorFactory,
-        ProductCollectionFactory                $productCollectionFactory
+        RegenerateHelper                  $helper,
+        ResourceConnection                $resourceConnection,
+        ProductActionFactory              $productActionFactory,
+        ProductUrlRewriteGeneratorFactory $productUrlRewriteGeneratorFactory,
+        ProductUrlPathGeneratorFactory    $productUrlPathGeneratorFactory,
+        ProductCollectionFactory          $productCollectionFactory,
+        ?ProductResource                  $entityResource = null
     )
     {
         parent::__construct($helper, $resourceConnection);
+        $this->entityResource = $entityResource;
 
         $this->productActionFactory = $productActionFactory;
         $this->productUrlRewriteGeneratorFactory = $productUrlRewriteGeneratorFactory;
@@ -312,7 +316,7 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
     ): void {
         $singleStore = $this->helper->getStoreManager()->hasSingleStore();
         $writeStoreId = $singleStore ? 0 : $storeId;
-        $connection = $entity->getResource()->getConnection();
+        $connection = $this->_getEntityResource()->getConnection();
         $this->_beginTransaction($connection);
         try {
             if (array_key_exists('url_key', $attributes)) {
@@ -357,7 +361,7 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
      */
     protected function _writeUrlMaintenanceAttribute($entity, string $code, ?string $value, int $storeId, bool $singleStore): void
     {
-        $resource = $entity->getResource();
+        $resource = $this->_getEntityResource();
         $attribute = $resource->getAttribute($code);
         $connection = $resource->getConnection();
         $table = $attribute->getBackend()->getTable();

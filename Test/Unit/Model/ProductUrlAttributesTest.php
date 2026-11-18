@@ -18,6 +18,7 @@ use Magento\Store\Model\StoreManagerInterface;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class ProductUrlAttributesTest extends TestCase
 {
@@ -52,6 +53,7 @@ class ProductUrlAttributesTest extends TestCase
      * @param bool $dryRun
      * @return void
      */
+    #[DataProvider('keyCases')]
     public function testOnlyAChangedKeyUsesTheTimestampUpdatingAction(
         bool $singleStore,
         ?string $key,
@@ -100,7 +102,6 @@ class ProductUrlAttributesTest extends TestCase
             return $attribute;
         });
         $product = $this->createMock(Product::class);
-        $product->method('getResource')->willReturn($resource);
         $product->method('getId')->willReturn(7);
         $product->method('getData')->with('row_id')->willReturn(42);
         $storeManager = $this->createMock(StoreManagerInterface::class);
@@ -113,15 +114,22 @@ class ProductUrlAttributesTest extends TestCase
         } else {
             $action->expects(self::never())->method('updateAttributes');
         }
-        $model = new class ($helper, $action, $storeKey, $defaultKey) extends RegenerateProductRewrites {
+        $model = new class ($helper, $action, $storeKey, $defaultKey, $resource) extends RegenerateProductRewrites {
             /**
              * @param Regenerate $helper
              * @param Action $action
              * @param string|null $storeKey
              * @param string $defaultKey
+             * @param ProductResource $resource
              */
-            public function __construct($helper, $action, private ?string $storeKey, private string $defaultKey)
-            {
+            public function __construct(
+                $helper,
+                $action,
+                private ?string $storeKey,
+                private string $defaultKey,
+                ProductResource $resource
+            ) {
+                $this->entityResource = $resource;
                 $this->helper = $helper;
                 $this->productAction = $action;
             }
