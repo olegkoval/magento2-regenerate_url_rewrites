@@ -18,12 +18,13 @@ use OlegKoval\RegenerateUrlRewrites\Api\Data\ChangeInterface;
 use OlegKoval\RegenerateUrlRewrites\Model\Change;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 
 class ChangeTrackingTest extends TestCase
 {
     /**
-     * @var AdapterInterface&MockObject
+     * @var AdapterInterface&(MockObject|Stub)
      */
     private $connection;
 
@@ -42,16 +43,9 @@ class ChangeTrackingTest extends TestCase
      */
     protected function setUp(): void
     {
-        $select = $this->createMock(Select::class);
-        $select->method('from')->willReturnSelf();
-        $select->method('where')->willReturnSelf();
-        $this->connection = $this->createMock(AdapterInterface::class);
-        $this->connection->method('select')->willReturn($select);
-        $this->connection->method('quoteInto')->willReturnCallback(
-            fn (string $text, $value): string => str_replace('?', "'" . $value . "'", $text)
-        );
-        $resource = $this->createMock(ResourceConnection::class);
-        $resource->method('getConnection')->willReturn($this->connection);
+        $this->configureConnection();
+        $resource = $this->createStub(ResourceConnection::class);
+        $resource->method('getConnection')->willReturnCallback(fn () => $this->connection);
         $resource->method('getTableName')->willReturnArgument(0);
 
         $this->model = new class ($resource) extends RegenerateProductRewrites {
@@ -74,6 +68,22 @@ class ChangeTrackingTest extends TestCase
             }
         };
         $this->model->setChangeListener($this->listener());
+    }
+
+    /**
+     * @param bool $mock
+     * @return void
+     */
+    private function configureConnection(bool $mock = false): void
+    {
+        $select = $this->createStub(Select::class);
+        $select->method('from')->willReturnSelf();
+        $select->method('where')->willReturnSelf();
+        $this->connection = $mock ? $this->createMock(AdapterInterface::class) : $this->createStub(AdapterInterface::class);
+        $this->connection->method('select')->willReturn($select);
+        $this->connection->method('quoteInto')->willReturnCallback(
+            fn (string $text, $value): string => str_replace('?', "'" . $value . "'", $text)
+        );
     }
 
     /**
@@ -136,6 +146,7 @@ class ChangeTrackingTest extends TestCase
      */
     public function testASavedReplacementIsReportedAfterTheCommit(): void
     {
+        $this->configureConnection(true);
         $this->connection->method('fetchAll')->willReturnOnConsecutiveCalls(
             [$this->dbRow('old.html', 'catalog/product/view/id/5')],
             [$this->dbRow('new.html', 'catalog/product/view/id/5')]
@@ -221,6 +232,7 @@ class ChangeTrackingTest extends TestCase
      */
     public function testAFailingReadAfterTheCommitKeepsTheSaveAndReportsATrackingFailure(): void
     {
+        $this->configureConnection(true);
         $this->connection->method('fetchAll')->willReturnCallback(function (): array {
             static $calls = 0;
             if (++$calls === 2) {
@@ -246,6 +258,7 @@ class ChangeTrackingTest extends TestCase
      */
     public function testWithoutAListenerNothingIsReadOrQueued(): void
     {
+        $this->configureConnection(true);
         $this->model->setChangeListener(null);
         $this->connection->expects(self::never())->method('fetchAll');
 
@@ -262,7 +275,8 @@ class ChangeTrackingTest extends TestCase
      */
     public function testAttributeChangesCarryTheScopeOfTheRowWritten(): void
     {
-        $entity = $this->createConfiguredMock(\Magento\Catalog\Model\Product::class, ['getId' => 5]);
+        $entity = $this->createStub(\Magento\Catalog\Model\Product::class);
+        $entity->method('getId')->willReturn(5);
 
         $this->invoke(
             '_queueAttributeChanges',

@@ -14,12 +14,13 @@ use Magento\Framework\Serialize\Serializer\Json;
 use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 
 class AbstractRegenerateRewritesTest extends TestCase
 {
     /**
-     * @var AdapterInterface&MockObject
+     * @var AdapterInterface&(MockObject|Stub)
      */
     private $connection;
 
@@ -33,13 +34,10 @@ class AbstractRegenerateRewritesTest extends TestCase
      */
     protected function setUp(): void
     {
-        $this->connection = $this->createMock(AdapterInterface::class);
-        $this->connection->method('quoteInto')->willReturnCallback(
-            fn (string $text, $value): string => str_replace('?', "'" . $value . "'", $text)
-        );
+        $this->configureConnection();
 
-        $resource = $this->createMock(ResourceConnection::class);
-        $resource->method('getConnection')->willReturn($this->connection);
+        $resource = $this->createStub(ResourceConnection::class);
+        $resource->method('getConnection')->willReturnCallback(fn () => $this->connection);
         $resource->method('getTableName')->willReturnArgument(0);
 
         $this->model = new class ($resource) extends RegenerateProductRewrites {
@@ -67,6 +65,18 @@ class AbstractRegenerateRewritesTest extends TestCase
                 return isset($this->takenPaths[$rewrite['store_id'] . '|' . $rewrite['request_path']]) ? '1' : false;
             }
         };
+    }
+
+    /**
+     * @param bool $mock
+     * @return void
+     */
+    private function configureConnection(bool $mock = false): void
+    {
+        $this->connection = $mock ? $this->createMock(AdapterInterface::class) : $this->createStub(AdapterInterface::class);
+        $this->connection->method('quoteInto')->willReturnCallback(
+            fn (string $text, $value): string => str_replace('?', "'" . $value . "'", $text)
+        );
     }
 
     /**
@@ -127,6 +137,7 @@ class AbstractRegenerateRewritesTest extends TestCase
      */
     public function testSaveUrlRewritesUsesItsOwnTransactionOutsideACallersOne(): void
     {
+        $this->configureConnection(true);
         $this->connection->method('getTransactionLevel')->willReturn(0);
         $this->connection->expects(self::once())->method('beginTransaction');
         $this->connection->expects(self::once())->method('commit');
@@ -140,11 +151,12 @@ class AbstractRegenerateRewritesTest extends TestCase
      */
     public function testInsideACallersTransactionSaveUrlRewritesUsesASavepoint(): void
     {
+        $this->configureConnection(true);
         $queries = [];
         $this->connection->method('getTransactionLevel')->willReturn(1);
         $this->connection->method('query')->willReturnCallback(function (string $sql) use (&$queries) {
             $queries[] = $sql;
-            return $this->createMock(\Zend_Db_Statement_Interface::class);
+            return $this->createStub(\Zend_Db_Statement_Interface::class);
         });
         $this->connection->expects(self::never())->method('beginTransaction');
         $this->connection->expects(self::never())->method('commit');
@@ -171,12 +183,13 @@ class AbstractRegenerateRewritesTest extends TestCase
      */
     public function testOnceTheCallersTransactionIsLostNothingMoreIsWritten(): void
     {
+        $this->configureConnection(true);
         $this->connection->method('getTransactionLevel')->willReturn(1);
         $this->connection->method('query')->willReturnCallback(function (string $sql) {
             if (str_starts_with($sql, 'ROLLBACK TO SAVEPOINT')) {
                 throw new \Exception('SAVEPOINT okrur_0 does not exist');
             }
-            return $this->createMock(\Zend_Db_Statement_Interface::class);
+            return $this->createStub(\Zend_Db_Statement_Interface::class);
         });
         // the deadlock: the server rolls back the caller's whole transaction
         $this->connection->expects(self::once())->method('insertOnDuplicate')
@@ -203,7 +216,7 @@ class AbstractRegenerateRewritesTest extends TestCase
             if ($sql === 'ROLLBACK TO SAVEPOINT okrur_0') {
                 throw new \Exception('SAVEPOINT okrur_0 does not exist');
             }
-            return $this->createMock(\Zend_Db_Statement_Interface::class);
+            return $this->createStub(\Zend_Db_Statement_Interface::class);
         });
         $this->connection->method('insertOnDuplicate')->willReturnOnConsecutiveCalls(
             self::throwException(new \Exception('Deadlock found when trying to get lock')),
@@ -223,6 +236,7 @@ class AbstractRegenerateRewritesTest extends TestCase
      */
     public function testSaveUrlRewritesWithOnlyEmptyPathsTouchesNothing(): void
     {
+        $this->configureConnection(true);
         $this->connection->expects(self::never())->method('beginTransaction');
         $this->connection->expects(self::never())->method('delete');
         $this->connection->expects(self::never())->method('insertOnDuplicate');
@@ -240,6 +254,7 @@ class AbstractRegenerateRewritesTest extends TestCase
      */
     public function testSaveUrlRewritesRollbackRecordsOneFailurePerAffectedEntity(): void
     {
+        $this->configureConnection(true);
         $this->connection->method('insertOnDuplicate')->willThrowException(new \Exception('boom'));
         $this->connection->expects(self::once())->method('rollBack');
         $this->connection->expects(self::never())->method('commit');
@@ -260,6 +275,7 @@ class AbstractRegenerateRewritesTest extends TestCase
      */
     public function testSaveUrlRewritesWithoutEntityDataReplacesRowsOfTheGeneratedStores(): void
     {
+        $this->configureConnection(true);
         $this->connection->expects(self::once())->method('delete')->with(
             'url_rewrite',
             self::callback(fn (string $where): bool => str_contains($where, "store_id = '1'")
@@ -348,9 +364,9 @@ class AbstractRegenerateRewritesTest extends TestCase
      */
     public function testStoreUrlKeyDeleteRemovesOnlyThatStoresRowByTheLinkField(): void
     {
-        $backend = $this->createMock(\Magento\Eav\Model\Entity\Attribute\Backend\AbstractBackend::class);
+        $backend = $this->createStub(\Magento\Eav\Model\Entity\Attribute\Backend\AbstractBackend::class);
         $backend->method('getTable')->willReturn('catalog_product_entity_varchar');
-        $attribute = $this->createMock(\Magento\Eav\Model\Entity\Attribute\AbstractAttribute::class);
+        $attribute = $this->createStub(\Magento\Eav\Model\Entity\Attribute\AbstractAttribute::class);
         $attribute->method('getId')->willReturn('121');
         $attribute->method('getBackend')->willReturn($backend);
         $connection = $this->createMock(AdapterInterface::class);
@@ -360,12 +376,12 @@ class AbstractRegenerateRewritesTest extends TestCase
             'store_id = ?' => 2,
         ]);
         $resource = $this->createMock(\Magento\Catalog\Model\ResourceModel\Product::class);
-        $resource->method('getAttribute')->with('url_key')->willReturn($attribute);
+        $resource->expects(self::once())->method('getAttribute')->with('url_key')->willReturn($attribute);
         $resource->method('getLinkField')->willReturn('row_id');
         $resource->method('getConnection')->willReturn($connection);
         $product = $this->createMock(\Magento\Catalog\Model\Product::class);
         (fn () => $this->entityResource = $resource)->call($this->model);
-        $product->method('getData')->with('row_id')->willReturn('905');
+        $product->expects(self::atLeastOnce())->method('getData')->with('row_id')->willReturn('905');
 
         $this->invoke('_deleteStoreUrlKey', $product, 2);
     }

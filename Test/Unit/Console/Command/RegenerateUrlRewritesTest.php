@@ -378,10 +378,10 @@ Finished",
             }
         };
 
-        $helper = $this->createMock(RegenerateHelper::class);
+        $helper = $this->createStub(RegenerateHelper::class);
         $helper->method('getSupportMeText')->willReturn(['support']);
 
-        $consoleMessages = $this->createMock(ConsoleMessages::class);
+        $consoleMessages = $this->createStub(ConsoleMessages::class);
         $consoleMessages->method('getMessages')->willReturn($messages);
 
         (function () use ($service, $helper, $consoleMessages, $commandOptions): void {

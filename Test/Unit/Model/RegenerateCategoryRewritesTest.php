@@ -150,7 +150,7 @@ class RegenerateCategoryRewritesTest extends TestCase
      */
     public function testQueuedProductsAreRegeneratedOnceInBoundedBatchesWithOneTableSync(): void
     {
-        $collection = $this->createMock(\Magento\Catalog\Model\ResourceModel\Category\Collection::class);
+        $collection = $this->createStub(\Magento\Catalog\Model\ResourceModel\Category\Collection::class);
         $collection->method('getLastPageNumber')->willReturn(1);
         $collection->method('getSize')->willReturn(3);
         $collection->method('getIterator')->willReturn(new \ArrayIterator([
@@ -289,7 +289,7 @@ class RegenerateCategoryRewritesTest extends TestCase
      */
     public function testExactModeRepathsDescendantsInStoreViewsAfterTheDefaultScopeChangedThePath(): void
     {
-        $collection = $this->createMock(\Magento\Catalog\Model\ResourceModel\Category\Collection::class);
+        $collection = $this->createStub(\Magento\Catalog\Model\ResourceModel\Category\Collection::class);
         $collection->method('getLastPageNumber')->willReturn(1);
         $collection->method('getIterator')->willReturnCallback(
             fn () => new \ArrayIterator([new \Magento\Framework\DataObject(['id' => 3])])
@@ -417,7 +417,7 @@ class RegenerateCategoryRewritesTest extends TestCase
         array $changedIds,
         array $expectedDescendantPasses
     ): void {
-        $collection = $this->createMock(\Magento\Catalog\Model\ResourceModel\Category\Collection::class);
+        $collection = $this->createStub(\Magento\Catalog\Model\ResourceModel\Category\Collection::class);
         $collection->method('getLastPageNumber')->willReturn(1);
         $collection->method('getIterator')->willReturnCallback(fn () => new \ArrayIterator([
             new \Magento\Framework\DataObject(['id' => 1]),

@@ -22,12 +22,12 @@ class AdminFeedTest extends TestCase
     {
         $feedSource = $this->createMock(FeedSource::class);
         $feedSource->method('getFeedUrl')->willReturn('https://feed.test/n.xml');
-        $feedSource->method('fetch')->with(FeedSource::CHANNEL_ADMIN)->willReturn(null);
+        $feedSource->expects(self::once())->method('fetch')->with(FeedSource::CHANNEL_ADMIN)->willReturn(null);
 
         $cache = $this->createMock(CacheInterface::class);
-        $cache->method('load')->with('olegkoval_regenerateurlrewrites_notifications_lastcheck')->willReturn('1700000000');
+        $cache->expects(self::once())->method('load')->with('olegkoval_regenerateurlrewrites_notifications_lastcheck')->willReturn('1700000000');
         $cache->expects(self::once())->method('save')
-            ->with(self::isType('string'), 'olegkoval_regenerateurlrewrites_notifications_lastcheck');
+            ->with(self::callback(static fn ($value): bool => is_string($value)), 'olegkoval_regenerateurlrewrites_notifications_lastcheck');
 
         // bypass the constructor: its generated factories (InboxFactory, CurlFactory) don't exist in CI
         $feed = (new \ReflectionClass(AdminFeed::class))->newInstanceWithoutConstructor();

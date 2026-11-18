@@ -380,7 +380,7 @@ class StoppingARunTest extends TestCase
     private function collection(string $class, int $size): object
     {
         $items = array_map(fn (int $id): DataObject => new DataObject(['id' => $id]), range(1, $size));
-        $collection = $this->createMock($class);
+        $collection = $this->createStub($class);
         $collection->method('getLastPageNumber')->willReturn(1);
         $collection->method('getSize')->willReturn($size);
         $collection->method('getIterator')->willReturn(new \ArrayIterator($items));

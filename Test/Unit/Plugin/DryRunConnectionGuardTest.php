@@ -22,7 +22,7 @@ class DryRunConnectionGuardTest extends TestCase
     {
         $state = new DryRunState();
         $guard = new DryRunConnectionGuard($state);
-        $adapter = $this->createMock(Mysql::class);
+        $adapter = $this->createStub(Mysql::class);
 
         $guard->beforeCloseConnection($adapter);
 

@@ -89,13 +89,13 @@ class ProductUrlAttributesTest extends TestCase
                 return 1;
             }
         );
-        $resource = $this->createMock(ProductResource::class);
+        $resource = $this->createStub(ProductResource::class);
         $resource->method('getConnection')->willReturn($connection);
         $resource->method('getLinkField')->willReturn('row_id');
         $resource->method('getAttribute')->willReturnCallback(function ($code) {
-            $backend = $this->createMock(DefaultBackend::class);
+            $backend = $this->createStub(DefaultBackend::class);
             $backend->method('getTable')->willReturn('prefixed_product_varchar');
-            $attribute = $this->createMock(Attribute::class);
+            $attribute = $this->createStub(Attribute::class);
             $attribute->method('getId')->willReturn($code === 'url_path' ? 11 : 12);
             $attribute->method('getBackend')->willReturn($backend);
             $attribute->method('isScopeStore')->willReturn(true);
@@ -103,10 +103,10 @@ class ProductUrlAttributesTest extends TestCase
         });
         $product = $this->createMock(Product::class);
         $product->method('getId')->willReturn(7);
-        $product->method('getData')->with('row_id')->willReturn(42);
-        $storeManager = $this->createMock(StoreManagerInterface::class);
+        $product->expects(self::atLeastOnce())->method('getData')->with('row_id')->willReturn(42);
+        $storeManager = $this->createStub(StoreManagerInterface::class);
         $storeManager->method('hasSingleStore')->willReturn($singleStore);
-        $helper = $this->createMock(Regenerate::class);
+        $helper = $this->createStub(Regenerate::class);
         $helper->method('getStoreManager')->willReturn($storeManager);
         $action = $this->createMock(Action::class);
         if ($touch) {
