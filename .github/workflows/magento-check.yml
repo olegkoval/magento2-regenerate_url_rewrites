@@ -1,0 +1,136 @@
+name: Magento Check
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: magento-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  matrix:
+    name: Version matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - id: matrix
+        uses: lbajsarowicz/github-action-magento-matrix@v1
+
+  check:
+    name: "Magento ${{ matrix.magento }} @ PHP ${{ matrix.php }}"
+    needs: matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      pull-requests: read # list the files changed by the pull request
+    container:
+      image: wardenenv/php-fpm:${{ matrix.php }}-magento2 # zizmor: ignore[unpinned-images] the PHP version follows the matrix
+      options: --user 1001
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    env:
+      MAGENTO_EXTENSION_CHECK_SUMMARY: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The job container starts without the image's entrypoint, which is what selects Composer 2.
+      - name: Select Composer 2
+        run: |
+          mkdir -p "$HOME/bin"
+          ln -sf /usr/bin/composer2 "$HOME/bin/composer"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Composer and syntax
+        id: static
+        uses: lbajsarowicz/github-action-magento-extension/static@v1
+        with:
+          magento-version: ${{ matrix.magento }}
+          php-version: ${{ matrix.php }}
+          checks: validate,lint
+
+      - name: Install Magento ${{ matrix.magento }}
+        id: install
+        uses: lbajsarowicz/github-action-magento-extension/install@v1
+        with:
+          magento-version: ${{ matrix.magento }}
+          php-version: ${{ matrix.php }}
+
+      - name: PHPCS
+        id: phpcs
+        uses: lbajsarowicz/github-action-magento-extension/phpcs@v1
+        with:
+          magento-version: ${{ matrix.magento }}
+          php-version: ${{ matrix.php }}
+          annotations: ${{ strategy.job-index == 0 }}
+
+      - name: Compile and static content
+        id: compile
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: lbajsarowicz/github-action-magento-extension/compile@v1
+        with:
+          magento-version: ${{ matrix.magento }}
+          php-version: ${{ matrix.php }}
+
+      - name: Unit tests
+        id: unit
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        uses: lbajsarowicz/github-action-magento-extension/phpunit@v1
+        with:
+          magento-version: ${{ matrix.magento }}
+          php-version: ${{ matrix.php }}
+          suite: unit
+          testdox: true
+
+      - name: PHPStan
+        id: phpstan
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        uses: lbajsarowicz/github-action-magento-extension/phpstan@v1
+        with:
+          magento-version: ${{ matrix.magento }}
+          php-version: ${{ matrix.php }}
+          annotations: ${{ strategy.job-index == 0 }}
+
+      - name: Upload results
+        if: ${{ always() && steps.static.outputs.result-path != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: magento-check-${{ matrix.magento }}-php${{ matrix.php }}
+          path: ${{ steps.static.outputs.result-path }}
+          retention-days: 7
+
+  result:
+    name: Result
+    if: ${{ always() }}
+    needs: [matrix, check]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: magento-check-*
+          path: magento-check-results
+      - uses: lbajsarowicz/github-action-magento-extension/report@v1
+        with:
+          matrix: ${{ needs.matrix.outputs.matrix }}
+          checks: validate,lint,install,phpcs,compile,static-content,unit,phpstan
+      - name: Fail unless every job succeeded
+        if: ${{ always() }}
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Jobs: $RESULTS"
+          [[ ! "$RESULTS" =~ (failure|cancelled|skipped) ]]
