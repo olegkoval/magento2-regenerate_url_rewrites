@@ -10,12 +10,12 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
 
+use Magento\Framework\Console\Cli;
 use Magento\Framework\Exception\InputException;
 use OlegKoval\RegenerateUrlRewrites\Api\Data\RunOptionsInterface;
 use OlegKoval\RegenerateUrlRewrites\Console\ConsoleChangeReporter;
 use OlegKoval\RegenerateUrlRewrites\Console\ConsoleProgressReporter;
 use OlegKoval\RegenerateUrlRewrites\Model\RunOptionsBuilder;
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -34,11 +34,6 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
      * @var null|InputInterface
      */
     protected ?InputInterface $_input = null;
-
-    /**
-     * @var null|OutputInterface
-     */
-    protected ?OutputInterface $_output = null;
 
     /**
      * @return void
@@ -208,7 +203,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                 $this->_addConsoleMsg($error);
             }
             $this->_displayConsoleMsg();
-            return  Command::FAILURE;
+            return Cli::RETURN_FAILURE;
         }
 
         try {
@@ -224,7 +219,7 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
                 $this->_addConsoleMsg($error->getMessage());
             }
             $this->_displayConsoleMsg();
-            return Command::FAILURE;
+            return Cli::RETURN_FAILURE;
         }
 
         $this->_displayConsoleMsg();
@@ -244,12 +239,12 @@ class RegenerateUrlRewrites extends RegenerateUrlRewritesAbstract
             $this->_displayFailures($result->getFailureCounts(), $result->getFailures());
             $this->_output->writeln('Finished with failures');
 
-            return Command::FAILURE;
+            return Cli::RETURN_FAILURE;
         }
 
         $this->_output->writeln('Finished');
 
-        return Command::SUCCESS;
+        return Cli::RETURN_SUCCESS;
     }
 
     /**

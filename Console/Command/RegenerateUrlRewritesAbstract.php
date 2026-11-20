@@ -11,6 +11,7 @@
 namespace OlegKoval\RegenerateUrlRewrites\Console\Command;
 
 use Magento\Framework\Phrase;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Command\Command;
 use Magento\Config\Model\Config\Factory as ConfigFactory;
 use Magento\Config\Model\Config\Reader\Source\Deployed\SettingChecker;
@@ -26,6 +27,11 @@ use OlegKoval\RegenerateUrlRewrites\Model\Notification\ConsoleMessages;
 
 abstract class RegenerateUrlRewritesAbstract extends Command
 {
+    /**
+     * @var null|OutputInterface
+     */
+    protected ?OutputInterface $_output = null;
+
     const INPUT_KEY_STORE_ID = 'store-id';
     const INPUT_KEY_REGENERATE_ENTITY_TYPE = 'entity-type';
     const INPUT_KEY_SAVE_REWRITES_HISTORY = 'save-old-urls';
@@ -120,7 +126,7 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      * RegenerateUrlRewritesAbstract constructor
      *
      * @param ResourceConnection $resource
-     * @param AppState\Proxy $appState
+     * @param AppState $appState
      * @param StoreManagerInterface $storeManager
      * @param RegenerateHelper $helper
      * @param RegenerateCategoryRewrites $regenerateCategoryRewrites
@@ -133,16 +139,16 @@ abstract class RegenerateUrlRewritesAbstract extends Command
      *        before 1.12.0
      */
     public function __construct(
-        ResourceConnection         $resource,
-        AppState\Proxy             $appState,
-        StoreManagerInterface      $storeManager,
-        RegenerateHelper           $helper,
-        RegenerateCategoryRewrites $regenerateCategoryRewrites,
-        RegenerateProductRewrites  $regenerateProductRewrites,
-        ConfigFactory              $configFactory,
-        SettingChecker             $settingChecker,
+        ResourceConnection          $resource,
+        AppState                    $appState,
+        StoreManagerInterface       $storeManager,
+        RegenerateHelper            $helper,
+        RegenerateCategoryRewrites  $regenerateCategoryRewrites,
+        RegenerateProductRewrites   $regenerateProductRewrites,
+        ConfigFactory               $configFactory,
+        SettingChecker              $settingChecker,
         ?RegenerateServiceInterface $regenerateService = null,
-        ?ConsoleMessages $consoleMessages = null
+        ?ConsoleMessages            $consoleMessages = null
     )
     {
         parent::__construct();

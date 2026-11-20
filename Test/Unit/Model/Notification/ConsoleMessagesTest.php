@@ -30,7 +30,7 @@ class ConsoleMessagesTest extends TestCase
             ->willReturn(new \SimpleXMLElement("<rss><channel>$items</channel></rss>"));
 
         $saved = null;
-        $flagManager = $this->createMock(FlagManager::class);
+        $flagManager = $this->createStub(FlagManager::class);
         $flagManager->method('getFlagData')->willReturn(['checked_at' => time() - 90000, 'messages' => []]);
         $flagManager->method('saveFlag')->willReturnCallback(function ($code, $value) use (&$saved): bool {
             $saved = $value;
@@ -53,7 +53,7 @@ class ConsoleMessagesTest extends TestCase
         $stored = [['title' => 'kept', 'description' => '', 'link' => '']];
         $feedSource = $this->feedSource(true);
         $feedSource->expects(self::never())->method('fetch');
-        $flagManager = $this->createMock(FlagManager::class);
+        $flagManager = $this->createStub(FlagManager::class);
         $flagManager->method('getFlagData')->willReturn(['checked_at' => time() - 60, 'messages' => $stored]);
 
         self::assertSame($stored, (new ConsoleMessages($feedSource, $flagManager))->getMessages());
@@ -81,9 +81,9 @@ class ConsoleMessagesTest extends TestCase
     {
         $disabled = $this->feedSource(false);
         $disabled->expects(self::never())->method('fetch');
-        self::assertSame([], (new ConsoleMessages($disabled, $this->createMock(FlagManager::class)))->getMessages());
+        self::assertSame([], (new ConsoleMessages($disabled, $this->createStub(FlagManager::class)))->getMessages());
 
-        $flagManager = $this->createMock(FlagManager::class);
+        $flagManager = $this->createStub(FlagManager::class);
         $flagManager->method('getFlagData')->willThrowException(new \Exception('table missing'));
         self::assertSame([], (new ConsoleMessages($this->feedSource(true), $flagManager))->getMessages());
     }
@@ -95,7 +95,7 @@ class ConsoleMessagesTest extends TestCase
     private function feedSource(bool $enabled): FeedSource
     {
         $feedSource = $this->createMock(FeedSource::class);
-        $feedSource->method('isEnabled')->willReturn($enabled);
+        $feedSource->expects(self::once())->method('isEnabled')->willReturn($enabled);
 
         return $feedSource;
     }

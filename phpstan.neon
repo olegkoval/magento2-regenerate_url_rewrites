@@ -1,0 +1,16 @@
+parameters:
+    level: 1
+    paths:
+        - .
+    excludePaths:
+        analyseAndScan:
+            - vendor/* (?)
+            - node_modules/* (?)
+            - Test/*/_files/* (?)
+            - Test/Mftf/* (?)
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        -
+            message: '#^Attribute class PHPUnit\\Framework\\Attributes\\\w+ does not exist\.$#'
+            path: Test/*

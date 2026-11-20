@@ -30,7 +30,7 @@ use OlegKoval\RegenerateUrlRewrites\Model\RegenerateCategoryRewrites;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateService;
 use OlegKoval\RegenerateUrlRewrites\Model\RunOptionsBuilder;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 
 class RegenerateServiceTest extends TestCase
@@ -41,12 +41,12 @@ class RegenerateServiceTest extends TestCase
     private $productModel;
 
     /**
-     * @var AppState&MockObject
+     * @var AppState&Stub
      */
     private $appState;
 
     /**
-     * @var SettingChecker&MockObject
+     * @var SettingChecker&Stub
      */
     private $settingChecker;
 
@@ -74,12 +74,12 @@ class RegenerateServiceTest extends TestCase
     private array $reindexed = [];
 
     /**
-     * @var CacheManager&MockObject
+     * @var CacheManager&Stub
      */
     private $cacheManager;
 
     /**
-     * @var StoreManagerInterface&MockObject
+     * @var StoreManagerInterface&Stub
      */
     private $storeManager;
 
@@ -96,7 +96,7 @@ class RegenerateServiceTest extends TestCase
     private array $storeDuringReindex = [];
 
     /**
-     * @var EmulatedAdminhtmlAreaProcessor&MockObject
+     * @var EmulatedAdminhtmlAreaProcessor&Stub
      */
     private $areaProcessor;
 
@@ -107,7 +107,7 @@ class RegenerateServiceTest extends TestCase
     private int $adminhtmlCalls = 0;
 
     /**
-     * @var \Magento\Framework\Event\ManagerInterface&MockObject
+     * @var \Magento\Framework\Event\ManagerInterface&Stub
      */
     private $eventManager;
 
@@ -150,12 +150,12 @@ class RegenerateServiceTest extends TestCase
     private $dryRunState;
 
     /**
-     * @var \Magento\Catalog\Model\CategoryRepository&MockObject
+     * @var \Magento\Catalog\Model\CategoryRepository&Stub
      */
     private $categoryRepository;
 
     /**
-     * @var AdapterInterface&MockObject
+     * @var AdapterInterface&Stub
      */
     private $connection;
 
@@ -170,12 +170,10 @@ class RegenerateServiceTest extends TestCase
      */
     protected function setUp(): void
     {
-        $select = $this->createMock(Select::class);
+        $select = $this->createStub(Select::class);
         $select->method('from')->willReturnSelf();
         $select->method('order')->willReturnSelf();
-        $connection = $this->createMockForIntersectionOfInterfaces(
-            [AdapterInterface::class, \Magento\Framework\ObjectManager\ResetAfterRequestInterface::class]
-        );
+        $connection = $this->createStub(ResettableAdapterInterface::class);
         $connection->method('select')->willReturn($select);
         $connection->method('fetchAll')->willReturnCallback(fn (): array => $this->storeRows);
         $connection->method('getTransactionLevel')->willReturnCallback(fn (): int => $this->transactionLevel);
@@ -191,13 +189,13 @@ class RegenerateServiceTest extends TestCase
         });
         $connection->method('query')->willReturnCallback(function (string $sql) {
             $this->sqlLog[] = $sql;
-            return $this->createMock(\Zend_Db_Statement_Interface::class);
+            return $this->createStub(\Zend_Db_Statement_Interface::class);
         });
-        $resource = $this->createMock(ResourceConnection::class);
+        $resource = $this->createStub(ResourceConnection::class);
         $resource->method('getConnection')->willReturn($connection);
         $resource->method('getTableName')->willReturnArgument(0);
 
-        $this->appState = $this->createMock(AppState::class);
+        $this->appState = $this->createStub(AppState::class);
         $this->appState->method('getAreaCode')->willReturn('adminhtml');
 
         $this->productModel = new class () extends RegenerateProductRewrites {
@@ -277,11 +275,11 @@ class RegenerateServiceTest extends TestCase
         };
         $categoryModel = (new \ReflectionClass(RegenerateCategoryRewrites::class))->newInstanceWithoutConstructor();
 
-        $this->settingChecker = $this->createMock(SettingChecker::class);
+        $this->settingChecker = $this->createStub(SettingChecker::class);
 
-        $configFactory = $this->createMock(ConfigFactory::class);
+        $configFactory = $this->createStub(ConfigFactory::class);
         $configFactory->method('create')->willReturnCallback(function (array $args): Config {
-            $config = $this->createMock(Config::class);
+            $config = $this->createStub(Config::class);
             $config->method('setDataByPath')->willReturnCallback(
                 function (string $path, $value) use ($args, $config): Config {
                     $this->savedConfig[$path][] = [$args['data']['scope'], $args['data']['scope_code'], $value];
@@ -297,14 +295,14 @@ class RegenerateServiceTest extends TestCase
             return $config;
         });
 
-        $indexerConfig = $this->createMock(IndexerConfig::class);
+        $indexerConfig = $this->createStub(IndexerConfig::class);
         $indexerConfig->method('getIndexers')->willReturnCallback(fn (): array => $this->indexers);
         $indexerConfig->method('getIndexer')->willReturnCallback(
             fn (string $id): array => ['shared_index' => $this->indexers[$id][1]]
         );
-        $indexerRegistry = $this->createMock(IndexerRegistry::class);
+        $indexerRegistry = $this->createStub(IndexerRegistry::class);
         $indexerRegistry->method('get')->willReturnCallback(function (string $id): IndexerInterface {
-            $indexer = $this->createMock(IndexerInterface::class);
+            $indexer = $this->createStub(IndexerInterface::class);
             $indexer->method('getStatus')->willReturn($this->indexers[$id][0]);
             $indexer->method('getTitle')->willReturn(ucfirst($id));
             $indexer->method('reindexAll')->willReturnCallback(function () use ($id): void {
@@ -316,21 +314,21 @@ class RegenerateServiceTest extends TestCase
             });
             return $indexer;
         });
-        $makeSharedIndexValid = $this->createMock(MakeSharedIndexValid::class);
+        $makeSharedIndexValid = $this->createStub(MakeSharedIndexValid::class);
         $makeSharedIndexValid->method('execute')->willReturn(true);
 
-        $this->cacheManager = $this->createMock(CacheManager::class);
+        $this->cacheManager = $this->createStub(CacheManager::class);
         $this->cacheManager->method('getAvailableTypes')->willReturn(['config', 'full_page']);
 
-        $this->storeManager = $this->createMock(StoreManagerInterface::class);
-        $callerStore = $this->createMock(\Magento\Store\Api\Data\StoreInterface::class);
+        $this->storeManager = $this->createStub(StoreManagerInterface::class);
+        $callerStore = $this->createStub(\Magento\Store\Api\Data\StoreInterface::class);
         $callerStore->method('getId')->willReturn('1');
         $this->storeManager->method('getStore')->willReturn($callerStore);
         $this->storeManager->method('setCurrentStore')->willReturnCallback(function ($store): void {
             $this->currentStores[] = $store;
         });
 
-        $this->eventManager = $this->createMock(\Magento\Framework\Event\ManagerInterface::class);
+        $this->eventManager = $this->createStub(\Magento\Framework\Event\ManagerInterface::class);
         $this->eventManager->method('dispatch')->willReturnCallback(function (string $event): void {
             $this->cacheSteps[] = $event;
         });
@@ -341,17 +339,14 @@ class RegenerateServiceTest extends TestCase
             $this->cacheSteps[] = 'flush';
         });
 
-        $this->areaProcessor = $this->createMock(EmulatedAdminhtmlAreaProcessor::class);
+        $this->areaProcessor = $this->createStub(EmulatedAdminhtmlAreaProcessor::class);
         $this->areaProcessor->method('process')->willReturnCallback(function (callable $callback) {
             $this->adminhtmlCalls++;
             return $callback();
         });
 
         $this->dryRunState = new \OlegKoval\RegenerateUrlRewrites\Model\DryRunState();
-        $this->categoryRepository = $this->getMockBuilder(\Magento\Catalog\Model\CategoryRepository::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['_resetState'])
-            ->getMock();
+        $this->categoryRepository = $this->createStub(\Magento\Catalog\Model\CategoryRepository::class);
         $this->connection = $connection;
 
         $this->service = new RegenerateService(
@@ -370,7 +365,7 @@ class RegenerateServiceTest extends TestCase
             $this->eventManager,
             $this->dryRunState,
             $this->categoryRepository,
-            $this->createMock(\Magento\Catalog\Api\ProductRepositoryInterface::class)
+            $this->createStub(\Magento\Catalog\Api\ProductRepositoryInterface::class)
         );
     }
 
@@ -561,7 +556,7 @@ class RegenerateServiceTest extends TestCase
      */
     public function testTheChangeListenerIsAttachedForTheRunOnly(): void
     {
-        $listener = $this->createMock(\OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface::class);
+        $listener = $this->createStub(\OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface::class);
 
         $this->service->run($this->options()->setStoreIds([1])->create(), null, $listener);
 
@@ -624,7 +619,13 @@ class RegenerateServiceTest extends TestCase
      */
     public function testCacheIsCleanedAndFlushedOnlyWhenAsked(): void
     {
-        $this->cacheManager->expects(self::once())->method('clean')->with(['config', 'full_page']);
+        $cacheManager = $this->createMock(CacheManager::class);
+        $cacheManager->method('getAvailableTypes')->willReturn(['config', 'full_page']);
+        $cacheManager->expects(self::once())->method('clean')->with(['config', 'full_page']);
+        $cacheManager->method('clean')->willReturnCallback(function (): void {
+            $this->cacheSteps[] = 'clean';
+        });
+        (fn () => $this->cacheManager = $cacheManager)->call($this->service);
 
         $this->service->run($this->options()->setCleanCache(true)->create());
 
@@ -649,7 +650,7 @@ class RegenerateServiceTest extends TestCase
      */
     public function testRunWithoutAnAreaRunsInTheAdminhtmlAreaAndConfigScope(): void
     {
-        $appState = $this->createMock(AppState::class);
+        $appState = $this->createStub(AppState::class);
         $appState->method('getAreaCode')->willThrowException(new LocalizedException(__('Area code is not set')));
         (fn () => $this->appState = $appState)->call($this->service);
 
@@ -674,7 +675,7 @@ class RegenerateServiceTest extends TestCase
      */
     public function testAFailingCacheObserverDoesNotSkipTheCacheOperation(): void
     {
-        $eventManager = $this->createMock(\Magento\Framework\Event\ManagerInterface::class);
+        $eventManager = $this->createStub(\Magento\Framework\Event\ManagerInterface::class);
         $eventManager->method('dispatch')->willThrowException(new \RuntimeException('varnish unreachable'));
         (fn () => $this->eventManager = $eventManager)->call($this->service);
 
@@ -754,13 +755,17 @@ class RegenerateServiceTest extends TestCase
         $this->storeManager->method('setCurrentStore')->willReturnCallback(function (): void {
             $this->activeDuringRun ??= $this->dryRunState->isActive();
         });
-        $this->categoryRepository->expects(self::once())->method('_resetState');
+        $resetCalls = 0;
+        $this->categoryRepository->method('_resetState')->willReturnCallback(function () use (&$resetCalls): void {
+            $resetCalls++;
+        });
 
         $result = $this->service->run(
             $this->options()->setDryRun(true)->setReindex(true)->setCleanCache(true)->setFlushCache(true)->create(),
             $reporter
         );
 
+        self::assertSame(1, $resetCalls);
         self::assertSame(['SET autocommit = 0', 'begin', 'rollback', 'SET autocommit = 1'], $this->sqlLog);
         self::assertSame([0, 1, 2], array_keys($this->productModel->runs));
         self::assertTrue($this->productModel->runs[1]['dryRun'], 'the models know, e.g. to skip the mass action');
@@ -779,7 +784,10 @@ class RegenerateServiceTest extends TestCase
     public function testWhenTheConnectionIsGoneTheDryRunDropsItAndTheAdapterState(): void
     {
         $this->connection->method('rollBack')->willThrowException(new \Exception('MySQL server has gone away'));
-        $this->connection->expects(self::once())->method('_resetState');
+        $resetCalls = 0;
+        $this->connection->method('_resetState')->willReturnCallback(function () use (&$resetCalls): void {
+            $resetCalls++;
+        });
 
         try {
             $this->service->run($this->options()->setDryRun(true)->create());
@@ -789,6 +797,7 @@ class RegenerateServiceTest extends TestCase
         }
 
         self::assertFalse($this->dryRunState->isActive());
+        self::assertSame(1, $resetCalls);
         self::assertSame('SET autocommit = 1', end($this->sqlLog));
     }
 

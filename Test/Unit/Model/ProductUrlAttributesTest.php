@@ -18,6 +18,7 @@ use Magento\Store\Model\StoreManagerInterface;
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate;
 use OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class ProductUrlAttributesTest extends TestCase
 {
@@ -52,6 +53,7 @@ class ProductUrlAttributesTest extends TestCase
      * @param bool $dryRun
      * @return void
      */
+    #[DataProvider('keyCases')]
     public function testOnlyAChangedKeyUsesTheTimestampUpdatingAction(
         bool $singleStore,
         ?string $key,
@@ -87,25 +89,24 @@ class ProductUrlAttributesTest extends TestCase
                 return 1;
             }
         );
-        $resource = $this->createMock(ProductResource::class);
+        $resource = $this->createStub(ProductResource::class);
         $resource->method('getConnection')->willReturn($connection);
         $resource->method('getLinkField')->willReturn('row_id');
         $resource->method('getAttribute')->willReturnCallback(function ($code) {
-            $backend = $this->createMock(DefaultBackend::class);
+            $backend = $this->createStub(DefaultBackend::class);
             $backend->method('getTable')->willReturn('prefixed_product_varchar');
-            $attribute = $this->createMock(Attribute::class);
+            $attribute = $this->createStub(Attribute::class);
             $attribute->method('getId')->willReturn($code === 'url_path' ? 11 : 12);
             $attribute->method('getBackend')->willReturn($backend);
             $attribute->method('isScopeStore')->willReturn(true);
             return $attribute;
         });
         $product = $this->createMock(Product::class);
-        $product->method('getResource')->willReturn($resource);
         $product->method('getId')->willReturn(7);
-        $product->method('getData')->with('row_id')->willReturn(42);
-        $storeManager = $this->createMock(StoreManagerInterface::class);
+        $product->expects(self::atLeastOnce())->method('getData')->with('row_id')->willReturn(42);
+        $storeManager = $this->createStub(StoreManagerInterface::class);
         $storeManager->method('hasSingleStore')->willReturn($singleStore);
-        $helper = $this->createMock(Regenerate::class);
+        $helper = $this->createStub(Regenerate::class);
         $helper->method('getStoreManager')->willReturn($storeManager);
         $action = $this->createMock(Action::class);
         if ($touch) {
@@ -113,15 +114,22 @@ class ProductUrlAttributesTest extends TestCase
         } else {
             $action->expects(self::never())->method('updateAttributes');
         }
-        $model = new class ($helper, $action, $storeKey, $defaultKey) extends RegenerateProductRewrites {
+        $model = new class ($helper, $action, $storeKey, $defaultKey, $resource) extends RegenerateProductRewrites {
             /**
              * @param Regenerate $helper
              * @param Action $action
              * @param string|null $storeKey
              * @param string $defaultKey
+             * @param ProductResource $resource
              */
-            public function __construct($helper, $action, private ?string $storeKey, private string $defaultKey)
-            {
+            public function __construct(
+                $helper,
+                $action,
+                private ?string $storeKey,
+                private string $defaultKey,
+                ProductResource $resource
+            ) {
+                $this->entityResource = $resource;
                 $this->helper = $helper;
                 $this->productAction = $action;
             }
