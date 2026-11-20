@@ -23,7 +23,9 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - id: matrix
-        uses: lbajsarowicz/github-action-magento-matrix@v1
+        uses: lbajsarowicz/github-action-magento-matrix@4408bf7e120052a67a2ae21ce25344eedb2d3d33 # v1.0.1
+        with:
+          php: all
 
   check:
     name: "Magento ${{ matrix.magento }} @ PHP ${{ matrix.php }}"
@@ -55,7 +57,7 @@ jobs:
 
       - name: Composer and syntax
         id: static
-        uses: lbajsarowicz/github-action-magento-extension/static@v1
+        uses: lbajsarowicz/github-action-magento-extension/static@142a6af1f2eb2d9a643fefd9d69815cc46c6100d # v1.0.1
         with:
           magento-version: ${{ matrix.magento }}
           php-version: ${{ matrix.php }}
@@ -63,14 +65,14 @@ jobs:
 
       - name: Install Magento ${{ matrix.magento }}
         id: install
-        uses: lbajsarowicz/github-action-magento-extension/install@v1
+        uses: lbajsarowicz/github-action-magento-extension/install@142a6af1f2eb2d9a643fefd9d69815cc46c6100d # v1.0.1
         with:
           magento-version: ${{ matrix.magento }}
           php-version: ${{ matrix.php }}
 
       - name: PHPCS
         id: phpcs
-        uses: lbajsarowicz/github-action-magento-extension/phpcs@v1
+        uses: lbajsarowicz/github-action-magento-extension/phpcs@142a6af1f2eb2d9a643fefd9d69815cc46c6100d # v1.0.1
         with:
           magento-version: ${{ matrix.magento }}
           php-version: ${{ matrix.php }}
@@ -79,7 +81,7 @@ jobs:
       - name: Compile and static content
         id: compile
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        uses: lbajsarowicz/github-action-magento-extension/compile@v1
+        uses: lbajsarowicz/github-action-magento-extension/compile@142a6af1f2eb2d9a643fefd9d69815cc46c6100d # v1.0.1
         with:
           magento-version: ${{ matrix.magento }}
           php-version: ${{ matrix.php }}
@@ -87,7 +89,7 @@ jobs:
       - name: Unit tests
         id: unit
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
-        uses: lbajsarowicz/github-action-magento-extension/phpunit@v1
+        uses: lbajsarowicz/github-action-magento-extension/phpunit@142a6af1f2eb2d9a643fefd9d69815cc46c6100d # v1.0.1
         with:
           magento-version: ${{ matrix.magento }}
           php-version: ${{ matrix.php }}
@@ -97,7 +99,7 @@ jobs:
       - name: PHPStan
         id: phpstan
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
-        uses: lbajsarowicz/github-action-magento-extension/phpstan@v1
+        uses: lbajsarowicz/github-action-magento-extension/phpstan@142a6af1f2eb2d9a643fefd9d69815cc46c6100d # v1.0.1
         with:
           magento-version: ${{ matrix.magento }}
           php-version: ${{ matrix.php }}
@@ -123,7 +125,7 @@ jobs:
         with:
           pattern: magento-check-*
           path: magento-check-results
-      - uses: lbajsarowicz/github-action-magento-extension/report@v1
+      - uses: lbajsarowicz/github-action-magento-extension/report@142a6af1f2eb2d9a643fefd9d69815cc46c6100d # v1.0.1
         with:
           matrix: ${{ needs.matrix.outputs.matrix }}
           checks: validate,lint,install,phpcs,compile,static-content,unit,phpstan
