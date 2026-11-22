@@ -453,11 +453,12 @@ class AbstractRegenerateRewritesTest extends TestCase
      */
     private function urlRewriteExistsCondition(int $entityId, int $storeId): string
     {
-        $adapter = $this->createMock(Mysql::class);
+        $this->configureConnection(true);
+        $adapter = $this->createStub(Mysql::class);
         $adapter->method('quoteInto')->willReturnCallback(
             fn (string $text, $value): string => str_replace('?', "'" . $value . "'", $text)
         );
-        $select = new Select($adapter, $this->createMock(SelectRenderer::class));
+        $select = new Select($adapter, $this->createStub(SelectRenderer::class));
         $this->connection->method('select')->willReturn($select);
         $this->connection->expects(self::once())->method('fetchOne')->with($select)->willReturn('7');
 
