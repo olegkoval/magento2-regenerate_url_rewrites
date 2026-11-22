@@ -267,16 +267,16 @@ Finished",
     public function testOnlyAnInteractiveRunWritingToATerminalCountsAsTerminalRun(): void
     {
         $command = (new \ReflectionClass(RegenerateUrlRewrites::class))->newInstanceWithoutConstructor();
-        $isTerminalRun = function (InputInterface $input, OutputInterface $output): bool {
-            $this->_input = $input;
-            $this->_output = $output;
-            return $this->_isTerminalRun();
+        $isTerminalRun = static function (InputInterface $input, OutputInterface $output) use ($command): bool {
+            (new \ReflectionProperty($command, '_input'))->setValue($command, $input);
+            (new \ReflectionProperty($command, '_output'))->setValue($command, $output);
+            return (new \ReflectionMethod($command, '_isTerminalRun'))->invoke($command);
         };
 
         // a cron job or a pipe: interactive by Symfony's default, but its output is no TTY
         $piped = new StreamOutput(fopen('php://memory', 'w'));
-        self::assertFalse($isTerminalRun->call($command, new ArrayInput([]), $piped));
-        self::assertFalse($isTerminalRun->call($command, new ArrayInput([]), new BufferedOutput()));
+        self::assertFalse($isTerminalRun(new ArrayInput([]), $piped));
+        self::assertFalse($isTerminalRun(new ArrayInput([]), new BufferedOutput()));
     }
 
     /**
@@ -378,10 +378,10 @@ Finished",
             }
         };
 
-        $helper = $this->createMock(RegenerateHelper::class);
+        $helper = $this->createStub(RegenerateHelper::class);
         $helper->method('getSupportMeText')->willReturn(['support']);
 
-        $consoleMessages = $this->createMock(ConsoleMessages::class);
+        $consoleMessages = $this->createStub(ConsoleMessages::class);
         $consoleMessages->method('getMessages')->willReturn($messages);
 
         (function () use ($service, $helper, $consoleMessages, $commandOptions): void {

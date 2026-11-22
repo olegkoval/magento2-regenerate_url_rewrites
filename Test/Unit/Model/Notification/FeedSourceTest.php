@@ -37,7 +37,7 @@ XML;
         $client->method('addHeader')->willReturnCallback(function ($name, $value) use (&$headers): void {
             $headers[$name] = $value;
         });
-        $client->method('get')->with('https://feed.test/n.xml');
+        $client->expects(self::exactly(4))->method('get')->with('https://feed.test/n.xml');
         $client->method('getStatus')->willReturn(200);
         $client->method('getBody')->willReturn(self::FEED);
 
@@ -68,15 +68,15 @@ XML;
      */
     public function testAnUnreachableOrBrokenFeedGivesNull(): void
     {
-        $notFound = $this->createMock(ClientInterface::class);
+        $notFound = $this->createStub(ClientInterface::class);
         $notFound->method('getStatus')->willReturn(404);
         $notFound->method('getBody')->willReturn(self::FEED);
 
-        $broken = $this->createMock(ClientInterface::class);
+        $broken = $this->createStub(ClientInterface::class);
         $broken->method('getStatus')->willReturn(200);
         $broken->method('getBody')->willReturn('<rss><channel>');
 
-        $offline = $this->createMock(ClientInterface::class);
+        $offline = $this->createStub(ClientInterface::class);
         $offline->method('get')->willThrowException(new \Exception('Could not resolve host'));
 
         foreach ([$notFound, $broken, $offline] as $client) {
@@ -89,14 +89,13 @@ XML;
      */
     public function testEnabledNeedsTheConfigFlagAndAUrl(): void
     {
-        $client = $this->createMock(ClientInterface::class);
         $config = $this->createMock(ScopeConfigInterface::class);
-        $config->method('isSetFlag')->with(FeedSource::XML_PATH_ENABLED)->willReturnOnConsecutiveCalls(true, false);
-        $factory = $this->createMock(ClientFactory::class);
+        $config->expects(self::exactly(2))->method('isSetFlag')->with(FeedSource::XML_PATH_ENABLED)->willReturnOnConsecutiveCalls(true, false);
+        $factory = $this->createStub(ClientFactory::class);
 
         self::assertTrue((new FeedSource($factory, $config, 'https://feed.test/n.xml'))->isEnabled());
         self::assertFalse((new FeedSource($factory, $config, 'https://feed.test/n.xml'))->isEnabled());
-        self::assertFalse((new FeedSource($factory, $this->createMock(ScopeConfigInterface::class)))->isEnabled());
+        self::assertFalse((new FeedSource($factory, $this->createStub(ScopeConfigInterface::class)))->isEnabled());
     }
 
     /**
@@ -106,12 +105,12 @@ XML;
      */
     private function source(ClientInterface $client, array $audiences): FeedSource
     {
-        $factory = $this->createMock(ClientFactory::class);
+        $factory = $this->createStub(ClientFactory::class);
         $factory->method('create')->willReturn($client);
 
         return new FeedSource(
             $factory,
-            $this->createMock(ScopeConfigInterface::class),
+            $this->createStub(ScopeConfigInterface::class),
             'https://feed.test/n.xml',
             $audiences
         );

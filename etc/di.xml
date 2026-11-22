@@ -11,6 +11,26 @@
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
     <preference for="OlegKoval\RegenerateUrlRewrites\Api\RegenerateServiceInterface" type="OlegKoval\RegenerateUrlRewrites\Model\RegenerateService"/>
+    <type name="OlegKoval\RegenerateUrlRewrites\Console\Command\RegenerateUrlRewritesAbstract">
+        <arguments>
+            <argument name="appState" xsi:type="object">Magento\Framework\App\State\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="OlegKoval\RegenerateUrlRewrites\Model\RegenerateProductRewrites">
+        <arguments>
+            <argument name="productUrlRewriteGeneratorFactory" xsi:type="object">Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGeneratorFactory\Proxy</argument>
+            <argument name="productUrlPathGeneratorFactory" xsi:type="object">Magento\CatalogUrlRewrite\Model\ProductUrlPathGeneratorFactory\Proxy</argument>
+            <argument name="entityResource" xsi:type="object">Magento\Catalog\Model\ResourceModel\Product\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="OlegKoval\RegenerateUrlRewrites\Model\RegenerateCategoryRewrites">
+        <arguments>
+            <argument name="databaseMapPool" xsi:type="object">Magento\CatalogUrlRewrite\Model\Map\DatabaseMapPool\Proxy</argument>
+            <argument name="categoryUrlPathGeneratorFactory" xsi:type="object">Magento\CatalogUrlRewrite\Model\CategoryUrlPathGeneratorFactory\Proxy</argument>
+            <argument name="categoryUrlRewriteGeneratorFactory" xsi:type="object">Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGeneratorFactory\Proxy</argument>
+            <argument name="entityResource" xsi:type="object">Magento\Catalog\Model\ResourceModel\Category\Proxy</argument>
+        </arguments>
+    </type>
     <!-- every bin/magento call constructs all commands: create the service (indexer config etc.) only when run -->
     <type name="OlegKoval\RegenerateUrlRewrites\Console\Command\RegenerateUrlRewrites">
         <arguments>

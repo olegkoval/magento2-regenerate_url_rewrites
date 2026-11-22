@@ -17,6 +17,9 @@ use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\Model\AbstractModel;
+use Magento\Framework\App\ObjectManager;
+use Magento\Catalog\Model\ResourceModel\Product as ProductResource;
+use Magento\Catalog\Model\ResourceModel\Category as CategoryResource;
 use Magento\UrlRewrite\Model\Storage\DbStorage;
 use Magento\CatalogUrlRewrite\Model\ResourceModel\Category\Product as ProductUrlRewriteResource;
 
@@ -156,6 +159,26 @@ abstract class AbstractRegenerateRewrites
      * @var ResourceConnection
      */
     protected $resourceConnection;
+
+    /**
+     * @var ProductResource|CategoryResource|null
+     */
+    protected $entityResource = null;
+
+    /**
+     * Return the catalog resource for the entity type being regenerated.
+     *
+     * @return ProductResource|CategoryResource
+     */
+    protected function _getEntityResource(): ProductResource|CategoryResource
+    {
+        if ($this->entityResource === null) {
+            $this->entityResource = ObjectManager::getInstance()->get(
+                $this->entityType === 'category' ? CategoryResource::class : ProductResource::class
+            );
+        }
+        return $this->entityResource;
+    }
 
     /**
      * RegenerateAbstract constructor
@@ -516,7 +539,7 @@ abstract class AbstractRegenerateRewrites
      */
     protected function _readUrlAttributes(AbstractModel $entity, array $storeIds): array
     {
-        $resource = $entity->getResource();
+        $resource = $this->_getEntityResource();
         $linkField = $resource->getLinkField();
         $codes = [];
         foreach (['url_key', 'url_path'] as $code) {
@@ -1027,7 +1050,7 @@ abstract class AbstractRegenerateRewrites
      */
     protected function _deleteStoreUrlKey(AbstractModel $entity, int $storeId): void
     {
-        $resource = $entity->getResource();
+        $resource = $this->_getEntityResource();
         $attribute = $resource->getAttribute('url_key');
         // the link field (row_id on Adobe Commerce, entity_id otherwise), as Magento's own EAV writes use
         $linkField = $resource->getLinkField();

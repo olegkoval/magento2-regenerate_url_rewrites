@@ -10,6 +10,7 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Model;
 
+use Magento\Catalog\Model\ResourceModel\Category as CategoryResource;
 use Magento\Catalog\Model\ResourceModel\Category\Collection;
 use Magento\Framework\Exception\LocalizedException;
 use OlegKoval\RegenerateUrlRewrites\Api\ChangeListenerInterface;
@@ -107,22 +108,25 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
      * @param RegenerateHelper $helper
      * @param ResourceConnection $resourceConnection
      * @param CategoryCollectionFactory $categoryCollectionFactory
-     * @param DatabaseMapPool\Proxy $databaseMapPool
-     * @param CategoryUrlPathGeneratorFactory\Proxy $categoryUrlPathGeneratorFactory
-     * @param CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory
+     * @param DatabaseMapPool $databaseMapPool
+     * @param CategoryUrlPathGeneratorFactory $categoryUrlPathGeneratorFactory
+     * @param CategoryUrlRewriteGeneratorFactory $categoryUrlRewriteGeneratorFactory
      * @param RegenerateProductRewrites $regenerateProductRewrites
+     * @param CategoryResource|null $entityResource
      */
     public function __construct(
-        RegenerateHelper                         $helper,
-        ResourceConnection                       $resourceConnection,
-        CategoryCollectionFactory                $categoryCollectionFactory,
-        DatabaseMapPool\Proxy                    $databaseMapPool,
-        CategoryUrlPathGeneratorFactory\Proxy    $categoryUrlPathGeneratorFactory,
-        CategoryUrlRewriteGeneratorFactory\Proxy $categoryUrlRewriteGeneratorFactory,
-        RegenerateProductRewrites                $regenerateProductRewrites
+        RegenerateHelper                   $helper,
+        ResourceConnection                 $resourceConnection,
+        CategoryCollectionFactory          $categoryCollectionFactory,
+        DatabaseMapPool                    $databaseMapPool,
+        CategoryUrlPathGeneratorFactory    $categoryUrlPathGeneratorFactory,
+        CategoryUrlRewriteGeneratorFactory $categoryUrlRewriteGeneratorFactory,
+        RegenerateProductRewrites          $regenerateProductRewrites,
+        ?CategoryResource                  $entityResource = null
     )
     {
         parent::__construct($helper, $resourceConnection);
+        $this->entityResource = $entityResource;
 
         $this->categoryCollectionFactory = $categoryCollectionFactory;
         $this->databaseMapPool = $databaseMapPool;
@@ -349,7 +353,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
                     $category->setUrlKey($generatedKey);
 
                     if ($storeId == 0 || $generatedKey !== $this->_getDefaultScopeUrlKey($category->getId())) {
-                        $category->getResource()->saveAttribute($category, 'url_key');
+                        $this->_getEntityResource()->saveAttribute($category, 'url_key');
                     } else {
                         $this->_deleteStoreUrlKey($category, $storeId);
                     }
@@ -369,7 +373,7 @@ class RegenerateCategoryRewrites extends AbstractRegenerateRewrites
             }
             if (!empty($urlPath)) {
                 $category->setUrlPath($urlPath);
-                $category->getResource()->saveAttribute($category, 'url_path');
+                $this->_getEntityResource()->saveAttribute($category, 'url_path');
                 if ($urlPath !== $currentUrlPath) {
                     $this->changedUrlPathIds[(int)$category->getId()] = true;
                 }
