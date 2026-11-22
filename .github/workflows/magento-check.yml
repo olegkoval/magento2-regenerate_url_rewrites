@@ -20,12 +20,26 @@ jobs:
     timeout-minutes: 5
     permissions: {}
     outputs:
-      matrix: ${{ steps.matrix.outputs.matrix }}
+      matrix: ${{ steps.compatibility.outputs.matrix }}
     steps:
       - id: matrix
         uses: lbajsarowicz/github-action-magento-matrix@4408bf7e120052a67a2ae21ce25344eedb2d3d33 # v1.0.1
         with:
           php: all
+      - name: Add Magento Open Source 2.4.9 compatibility jobs
+        id: compatibility
+        env:
+          MAGENTO_MATRIX: ${{ steps.matrix.outputs.matrix }}
+        run: |
+          # Magento Open Source 2.4.9 also allows PHP 8.3 and 8.4 in Composer.
+          matrix=$(jq -ce '
+            reduce ["8.3", "8.4"][] as $php (.;
+              if any(.include[]; .magento == "2.4.9" and .php == $php) then .
+              else .include += [{magento: "2.4.9", php: $php}]
+              end
+            )
+          ' <<< "$MAGENTO_MATRIX")
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   check:
     name: "Magento ${{ matrix.magento }} @ PHP ${{ matrix.php }}"
