@@ -28,11 +28,11 @@ Changelog: [CHANGELOG.md](CHANGELOG.md)
 
 ## REQUIREMENTS
 
-| Magento Open Source (CE) | PHP      |
-|--------------------------|----------|
-| 2.4.7                    | 8.2, 8.3 |
-| 2.4.8                    | 8.3, 8.4 |
-| 2.4.9 (latest)           | 8.4, 8.5 |
+| Magento Open Source (CE) | PHP           |
+|--------------------------|---------------|
+| 2.4.7                    | 8.2, 8.3      |
+| 2.4.8                    | 8.3, 8.4      |
+| 2.4.9 (latest)           | 8.3, 8.4, 8.5 |
 
 `composer.json` declares `"php": ">=8.2"`. PHP compatibility otherwise follows whatever your
 Magento version itself requires — the extension doesn't impose a narrower floor than Magento does.
